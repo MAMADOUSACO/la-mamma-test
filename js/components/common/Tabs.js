@@ -1,411 +1,575 @@
 /**
  * Composant Tabs - Système d'onglets
- * 
- * Utilisation:
- * const tabs = new Tabs({
- *   tabs: [
- *     { id: 'tab1', title: 'Premier onglet', content: 'Contenu du premier onglet' },
- *     { id: 'tab2', title: 'Deuxième onglet', content: 'Contenu du deuxième onglet' }
- *   ],
- *   activeTab: 'tab1',
- *   onChange: (tabId) => console.log(`Onglet actif: ${tabId}`)
- * });
- * container.appendChild(tabs.render());
+ * Fichier: js/components/common/Tabs.js
  */
 
 class Tabs {
-    /**
-     * Constructeur
-     * @param {Object} options - Options des onglets
-     * @param {Array} options.tabs - Liste des onglets
-     * @param {string} options.activeTab - ID de l'onglet actif
-     * @param {Function} options.onChange - Fonction appelée au changement d'onglet
-     * @param {string} options.orientation - Orientation des onglets (horizontal, vertical)
-     * @param {boolean} options.animated - Animer les transitions
-     * @param {string} options.className - Classes CSS additionnelles
-     * @param {string} options.id - ID du composant
-     * @param {boolean} options.swipeable - Permettre le swipe sur mobile
-     */
-    constructor(options = {}) {
-      this.tabs = options.tabs || [];
-      this.activeTabId = options.activeTab || (this.tabs[0] ? this.tabs[0].id : null);
-      this.onChange = options.onChange || null;
-      this.orientation = options.orientation || 'horizontal';
-      this.animated = options.animated !== false;
-      this.className = options.className || '';
-      this.id = options.id || 'tabs-' + Date.now();
-      this.swipeable = options.swipeable !== false;
-      
-      this.element = null;
-      this.tabsNavElement = null;
-      this.tabsContentElement = null;
-      this.tabButtons = {};
-      this.tabContents = {};
-      
-      this.touchStartX = 0;
-      this.touchEndX = 0;
-    }
+  /**
+   * Constructeur du composant Tabs
+   * @param {Object} options - Options de configuration
+   * @param {Array} options.tabs - Onglets à afficher
+   * @param {string} options.activeTab - ID de l'onglet actif
+   * @param {string} options.position - Position des onglets (top, bottom, left, right)
+   * @param {string} options.size - Taille des onglets (small, medium, large)
+   * @param {boolean} options.justified - Si true, les onglets prennent toute la largeur disponible
+   * @param {string} options.type - Type d'onglets (default, pills, underline)
+   * @param {boolean} options.closable - Si true, les onglets peuvent être fermés
+   * @param {boolean} options.scrollable - Si true, les onglets défilent horizontalement
+   * @param {string} options.className - Classes CSS additionnelles
+   * @param {Function} options.onTabChange - Callback lors du changement d'onglet
+   * @param {Function} options.onTabClose - Callback lors de la fermeture d'un onglet
+   */
+  constructor(options = {}) {
+    this.tabs = options.tabs || [];
+    this.activeTab = options.activeTab || (this.tabs.length > 0 ? this.tabs[0].id : '');
+    this.position = options.position || 'top';
+    this.size = options.size || 'medium';
+    this.justified = options.justified !== undefined ? options.justified : false;
+    this.type = options.type || 'default';
+    this.closable = options.closable !== undefined ? options.closable : false;
+    this.scrollable = options.scrollable !== undefined ? options.scrollable : false;
+    this.className = options.className || '';
+    this.onTabChange = options.onTabChange || (() => {});
+    this.onTabClose = options.onTabClose || (() => {});
+    
+    this.element = null;
+    this.tabsContainer = null;
+    this.contentsContainer = null;
+    this.scrollLeftButton = null;
+    this.scrollRightButton = null;
+  }
+
+  /**
+   * Génère et retourne l'élément HTML du système d'onglets
+   * @returns {HTMLElement} L'élément du système d'onglets
+   */
+  render() {
+    // Créer l'élément principal
+    this.element = document.createElement('div');
+    
+    // Construire les classes CSS
+    let cssClasses = [
+      'tabs-component',
+      `tabs-${this.position}`,
+      `tabs-${this.size}`,
+      `tabs-${this.type}`
+    ];
+    
+    if (this.justified) cssClasses.push('tabs-justified');
+    if (this.scrollable) cssClasses.push('tabs-scrollable');
+    if (this.className) cssClasses.push(this.className);
+    
+    this.element.className = cssClasses.join(' ');
+    
+    // Créer le conteneur des onglets
+    this._createTabsContainer();
+    
+    // Créer le conteneur des contenus
+    this._createContentsContainer();
+    
+    return this.element;
+  }
   
-    /**
-     * Rend le composant d'onglets
-     * @returns {HTMLElement} - Élément conteneur des onglets
-     */
-    render() {
-      // Créer le conteneur principal
-      this.element = document.createElement('div');
-      this.element.className = `tabs tabs-${this.orientation}`;
-      this.element.id = this.id;
+  /**
+   * Active un onglet par son ID
+   * @param {string} tabId - ID de l'onglet à activer
+   * @param {boolean} fireCallback - Si true, exécute le callback onTabChange
+   * @returns {Tabs} L'instance courante pour chaînage
+   */
+  activateTab(tabId, fireCallback = true) {
+    // Vérifier si l'onglet existe
+    const tab = this.tabs.find(tab => tab.id === tabId);
+    if (!tab) return this;
+    
+    this.activeTab = tabId;
+    
+    // Mettre à jour l'affichage si l'élément existe
+    if (this.tabsContainer && this.contentsContainer) {
+      // Onglets
+      const tabElements = this.tabsContainer.querySelectorAll('.tab-item');
+      tabElements.forEach(tabElement => {
+        if (tabElement.dataset.id === tabId) {
+          tabElement.classList.add('active');
+        } else {
+          tabElement.classList.remove('active');
+        }
+      });
       
-      if (this.className) {
-        this.className.split(' ').forEach(cls => {
-          if (cls) {
-            this.element.classList.add(cls);
+      // Contenus
+      const contentElements = this.contentsContainer.querySelectorAll('.tab-content');
+      contentElements.forEach(contentElement => {
+        if (contentElement.dataset.id === tabId) {
+          contentElement.classList.add('active');
+        } else {
+          contentElement.classList.remove('active');
+        }
+      });
+      
+      // Faire défiler jusqu'à l'onglet actif si scrollable
+      if (this.scrollable) {
+        const activeTabElement = this.tabsContainer.querySelector(`.tab-item[data-id="${tabId}"]`);
+        if (activeTabElement) {
+          this._scrollToTab(activeTabElement);
+        }
+      }
+    }
+    
+    // Exécuter le callback si demandé
+    if (fireCallback) {
+      this.onTabChange(tabId, tab);
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Ajoute un nouvel onglet
+   * @param {Object} tab - Données de l'onglet à ajouter
+   * @param {boolean} activate - Si true, active l'onglet après ajout
+   * @returns {Tabs} L'instance courante pour chaînage
+   */
+  addTab(tab, activate = true) {
+    // Vérifier si l'ID est unique
+    const exists = this.tabs.some(t => t.id === tab.id);
+    if (exists) return this;
+    
+    // Ajouter l'onglet aux données
+    this.tabs.push(tab);
+    
+    // Ajouter l'onglet à l'interface si elle existe
+    if (this.tabsContainer && this.contentsContainer) {
+      // Créer l'élément onglet
+      const tabElement = this._createTabElement(tab);
+      this.tabsContainer.querySelector('.tabs-list').appendChild(tabElement);
+      
+      // Créer l'élément contenu
+      const contentElement = this._createContentElement(tab);
+      this.contentsContainer.appendChild(contentElement);
+      
+      // Mettre à jour les boutons de défilement si nécessaire
+      if (this.scrollable) {
+        this._updateScrollButtons();
+      }
+    }
+    
+    // Activer l'onglet si demandé
+    if (activate) {
+      this.activateTab(tab.id);
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Supprime un onglet par son ID
+   * @param {string} tabId - ID de l'onglet à supprimer
+   * @returns {Tabs} L'instance courante pour chaînage
+   */
+  removeTab(tabId) {
+    // Vérifier si l'onglet existe
+    const index = this.tabs.findIndex(tab => tab.id === tabId);
+    if (index === -1) return this;
+    
+    // Déterminer l'onglet à activer après suppression
+    let nextActiveTab = null;
+    if (this.activeTab === tabId && this.tabs.length > 1) {
+      nextActiveTab = this.tabs[index + 1] || this.tabs[index - 1];
+    }
+    
+    // Supprimer l'onglet des données
+    this.tabs.splice(index, 1);
+    
+    // Supprimer l'onglet de l'interface si elle existe
+    if (this.tabsContainer && this.contentsContainer) {
+      // Supprimer l'élément onglet
+      const tabElement = this.tabsContainer.querySelector(`.tab-item[data-id="${tabId}"]`);
+      if (tabElement) {
+        tabElement.parentNode.removeChild(tabElement);
+      }
+      
+      // Supprimer l'élément contenu
+      const contentElement = this.contentsContainer.querySelector(`.tab-content[data-id="${tabId}"]`);
+      if (contentElement) {
+        this.contentsContainer.removeChild(contentElement);
+      }
+      
+      // Mettre à jour les boutons de défilement si nécessaire
+      if (this.scrollable) {
+        this._updateScrollButtons();
+      }
+    }
+    
+    // Activer le nouvel onglet si nécessaire
+    if (nextActiveTab) {
+      this.activateTab(nextActiveTab.id);
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Met à jour le contenu d'un onglet
+   * @param {string} tabId - ID de l'onglet à mettre à jour
+   * @param {string|HTMLElement} content - Nouveau contenu
+   * @returns {Tabs} L'instance courante pour chaînage
+   */
+  updateTabContent(tabId, content) {
+    // Vérifier si l'onglet existe
+    const tab = this.tabs.find(tab => tab.id === tabId);
+    if (!tab) return this;
+    
+    // Mettre à jour les données
+    tab.content = content;
+    
+    // Mettre à jour l'interface si elle existe
+    if (this.contentsContainer) {
+      const contentElement = this.contentsContainer.querySelector(`.tab-content[data-id="${tabId}"]`);
+      if (contentElement) {
+        // Vider le contenu actuel
+        contentElement.innerHTML = '';
+        
+        // Ajouter le nouveau contenu
+        if (content instanceof HTMLElement) {
+          contentElement.appendChild(content);
+        } else if (typeof content === 'string') {
+          contentElement.innerHTML = content;
+        }
+      }
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Met à jour la notification d'un onglet
+   * @param {string} tabId - ID de l'onglet
+   * @param {string|number} notification - Contenu de la notification (null pour masquer)
+   * @returns {Tabs} L'instance courante pour chaînage
+   */
+  updateTabNotification(tabId, notification) {
+    // Vérifier si l'onglet existe
+    const tab = this.tabs.find(tab => tab.id === tabId);
+    if (!tab) return this;
+    
+    // Mettre à jour les données
+    tab.notification = notification;
+    
+    // Mettre à jour l'interface si elle existe
+    if (this.tabsContainer) {
+      const tabElement = this.tabsContainer.querySelector(`.tab-item[data-id="${tabId}"]`);
+      if (tabElement) {
+        let badge = tabElement.querySelector('.tab-notification');
+        
+        if (notification) {
+          // Créer ou mettre à jour le badge
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'tab-notification';
+            tabElement.appendChild(badge);
           }
-        });
-      }
-      
-      if (this.animated) {
-        this.element.classList.add('tabs-animated');
-      }
-      
-      // Créer la barre de navigation des onglets
-      this.tabsNavElement = document.createElement('div');
-      this.tabsNavElement.className = 'tabs-nav';
-      
-      // Créer le conteneur de contenu des onglets
-      this.tabsContentElement = document.createElement('div');
-      this.tabsContentElement.className = 'tabs-content';
-      
-      // Créer les onglets
-      this.tabs.forEach(tab => this._createTab(tab));
-      
-      // Activer l'onglet initial
-      this._activateTab(this.activeTabId);
-      
-      // Assembler le composant
-      this.element.appendChild(this.tabsNavElement);
-      this.element.appendChild(this.tabsContentElement);
-      
-      // Activer le swipe si nécessaire
-      if (this.swipeable && this.orientation === 'horizontal') {
-        this._enableSwipe();
-      }
-      
-      return this.element;
-    }
-  
-    /**
-     * Crée un onglet
-     * @param {Object} tab - Configuration de l'onglet
-     * @private
-     */
-    _createTab(tab) {
-      // Créer le bouton de l'onglet
-      const tabButton = document.createElement('button');
-      tabButton.className = 'tab-button';
-      tabButton.setAttribute('role', 'tab');
-      tabButton.setAttribute('aria-controls', `tab-content-${tab.id}`);
-      tabButton.id = `tab-button-${tab.id}`;
-      
-      // Ajouter l'icône si spécifiée
-      if (tab.icon) {
-        const iconElement = document.createElement('span');
-        iconElement.className = 'tab-icon';
-        
-        // Utiliser le composant Button pour récupérer l'icône
-        if (window.components.Button) {
-          const tempButton = new window.components.Button({ icon: tab.icon, isIconOnly: true });
-          const tempElement = tempButton.render();
-          const iconWrapper = tempElement.querySelector('.btn-icon-wrapper');
-          
-          if (iconWrapper) {
-            iconElement.innerHTML = iconWrapper.innerHTML;
-          }
-        } else {
-          // Fallback
-          iconElement.classList.add('icon', `icon-${tab.icon}`);
+          badge.textContent = notification;
+        } else if (badge) {
+          // Supprimer le badge
+          tabElement.removeChild(badge);
         }
-        
-        tabButton.appendChild(iconElement);
       }
-      
-      // Ajouter le titre
-      const titleElement = document.createElement('span');
-      titleElement.className = 'tab-title';
-      titleElement.textContent = tab.title || tab.id;
-      tabButton.appendChild(titleElement);
-      
-      // Ajouter la notification si spécifiée
-      if (tab.notification) {
-        const notificationElement = document.createElement('span');
-        notificationElement.className = 'tab-notification';
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Nettoie les ressources utilisées par le composant
+   */
+  destroy() {
+    // Nettoyer les écouteurs d'événements
+    if (this.tabsContainer) {
+      const tabElements = this.tabsContainer.querySelectorAll('.tab-item');
+      tabElements.forEach(tabElement => {
+        tabElement.removeEventListener('click', tabElement._clickHandler);
         
-        if (typeof tab.notification === 'number') {
-          notificationElement.textContent = tab.notification > 99 ? '99+' : tab.notification;
-        } else {
-          notificationElement.textContent = tab.notification;
+        const closeButton = tabElement.querySelector('.tab-close');
+        if (closeButton) {
+          closeButton.removeEventListener('click', closeButton._clickHandler);
         }
-        
-        tabButton.appendChild(notificationElement);
-      }
-      
-      // Attacher l'événement de clic
-      tabButton.addEventListener('click', () => this.activateTab(tab.id));
-      
-      // Créer le contenu de l'onglet
-      const tabContent = document.createElement('div');
-      tabContent.className = 'tab-content';
-      tabContent.id = `tab-content-${tab.id}`;
-      tabContent.setAttribute('role', 'tabpanel');
-      tabContent.setAttribute('aria-labelledby', `tab-button-${tab.id}`);
-      
-      // Ajouter le contenu
-      if (typeof tab.content === 'string') {
-        tabContent.innerHTML = tab.content;
-      } else if (tab.content instanceof HTMLElement) {
-        tabContent.appendChild(tab.content);
-      }
-      
-      // Stocker les références
-      this.tabButtons[tab.id] = tabButton;
-      this.tabContents[tab.id] = tabContent;
-      
-      // Ajouter au DOM
-      this.tabsNavElement.appendChild(tabButton);
-      this.tabsContentElement.appendChild(tabContent);
-    }
-  
-    /**
-     * Active un onglet
-     * @param {string} tabId - ID de l'onglet à activer
-     */
-    activateTab(tabId) {
-      if (tabId === this.activeTabId) {
-        return;
-      }
-      
-      if (!this.tabButtons[tabId] || !this.tabContents[tabId]) {
-        console.error(`Onglet introuvable: ${tabId}`);
-        return;
-      }
-      
-      this._activateTab(tabId);
-      
-      // Appeler le callback onChange
-      if (this.onChange && typeof this.onChange === 'function') {
-        this.onChange(tabId);
-      }
-    }
-  
-    /**
-     * Active un onglet (implémentation interne)
-     * @param {string} tabId - ID de l'onglet à activer
-     * @private
-     */
-    _activateTab(tabId) {
-      // Désactiver tous les onglets
-      Object.keys(this.tabButtons).forEach(id => {
-        this.tabButtons[id].classList.remove('active');
-        this.tabContents[id].classList.remove('active');
       });
       
-      // Activer l'onglet demandé
-      this.tabButtons[tabId].classList.add('active');
-      this.tabContents[tabId].classList.add('active');
-      
-      // Mettre à jour l'onglet actif
-      this.activeTabId = tabId;
-    }
-  
-    /**
-     * Active le swipe sur mobile
-     * @private
-     */
-    _enableSwipe() {
-      // Ajouter les écouteurs d'événements tactiles
-      this.tabsContentElement.addEventListener('touchstart', (e) => {
-        this.touchStartX = e.changedTouches[0].screenX;
-      });
-      
-      this.tabsContentElement.addEventListener('touchend', (e) => {
-        this.touchEndX = e.changedTouches[0].screenX;
-        this._handleSwipe();
-      });
-    }
-  
-    /**
-     * Gère le swipe
-     * @private
-     */
-    _handleSwipe() {
-      // Seuil minimal pour considérer un swipe
-      const threshold = 50;
-      
-      // Déterminer la direction du swipe
-      const diff = this.touchEndX - this.touchStartX;
-      
-      if (Math.abs(diff) < threshold) {
-        return;
+      if (this.scrollLeftButton) {
+        this.scrollLeftButton.removeEventListener('click', this._handleScrollLeft);
       }
       
-      // Trouver l'index de l'onglet actif
-      const tabIds = Object.keys(this.tabButtons);
-      const currentIndex = tabIds.indexOf(this.activeTabId);
-      
-      if (diff > 0) {
-        // Swipe vers la droite = onglet précédent
-        if (currentIndex > 0) {
-          this.activateTab(tabIds[currentIndex - 1]);
-        }
-      } else {
-        // Swipe vers la gauche = onglet suivant
-        if (currentIndex < tabIds.length - 1) {
-          this.activateTab(tabIds[currentIndex + 1]);
-        }
+      if (this.scrollRightButton) {
+        this.scrollRightButton.removeEventListener('click', this._handleScrollRight);
       }
     }
-  
-    /**
-     * Ajoute un nouvel onglet
-     * @param {Object} tab - Configuration de l'onglet
-     */
-    addTab(tab) {
-      // Vérifier si l'ID existe déjà
-      if (this.tabButtons[tab.id]) {
-        console.error(`Un onglet avec l'ID ${tab.id} existe déjà`);
-        return;
-      }
-      
-      // Ajouter à la liste des onglets
-      this.tabs.push(tab);
-      
-      // Créer l'onglet
-      this._createTab(tab);
+    
+    // Supprimer l'élément du DOM s'il est attaché
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.removeChild(this.element);
     }
+    
+    // Réinitialiser les références
+    this.element = null;
+    this.tabsContainer = null;
+    this.contentsContainer = null;
+    this.scrollLeftButton = null;
+    this.scrollRightButton = null;
+  }
   
-    /**
-     * Supprime un onglet
-     * @param {string} tabId - ID de l'onglet à supprimer
-     */
-    removeTab(tabId) {
-      // Vérifier si l'onglet existe
-      if (!this.tabButtons[tabId]) {
-        console.error(`Onglet introuvable: ${tabId}`);
-        return;
-      }
-      
-      // Supprimer les éléments du DOM
-      this.tabsNavElement.removeChild(this.tabButtons[tabId]);
-      this.tabsContentElement.removeChild(this.tabContents[tabId]);
-      
-      // Supprimer les références
-      delete this.tabButtons[tabId];
-      delete this.tabContents[tabId];
-      
-      // Mettre à jour la liste des onglets
-      this.tabs = this.tabs.filter(tab => tab.id !== tabId);
-      
-      // Si c'était l'onglet actif, activer le premier onglet restant
-      if (this.activeTabId === tabId && this.tabs.length > 0) {
-        this.activateTab(this.tabs[0].id);
-      }
+  /* Méthodes privées */
+  
+  /**
+   * Crée le conteneur des onglets
+   * @private
+   */
+  _createTabsContainer() {
+    this.tabsContainer = document.createElement('div');
+    this.tabsContainer.className = 'tabs-header';
+    
+    // Ajouter les boutons de défilement si nécessaire
+    if (this.scrollable) {
+      // Bouton de défilement gauche
+      this.scrollLeftButton = document.createElement('button');
+      this.scrollLeftButton.type = 'button';
+      this.scrollLeftButton.className = 'tabs-scroll-button tabs-scroll-left';
+      this.scrollLeftButton.innerHTML = '<span class="arrow-left"></span>';
+      this.scrollLeftButton._handleScrollLeft = this._handleScrollLeft.bind(this);
+      this.scrollLeftButton.addEventListener('click', this.scrollLeftButton._handleScrollLeft);
+      this.scrollLeftButton.disabled = true; // Désactivé au début
+      this.tabsContainer.appendChild(this.scrollLeftButton);
     }
-  
-    /**
-     * Met à jour le contenu d'un onglet
-     * @param {string} tabId - ID de l'onglet
-     * @param {string|HTMLElement} content - Nouveau contenu
-     */
-    updateTabContent(tabId, content) {
-      // Vérifier si l'onglet existe
-      if (!this.tabContents[tabId]) {
-        console.error(`Onglet introuvable: ${tabId}`);
-        return;
-      }
-      
-      // Mettre à jour le contenu
-      this.tabContents[tabId].innerHTML = '';
-      
-      if (typeof content === 'string') {
-        this.tabContents[tabId].innerHTML = content;
-      } else if (content instanceof HTMLElement) {
-        this.tabContents[tabId].appendChild(content);
-      }
-      
-      // Mettre à jour l'objet de configuration
-      const tabIndex = this.tabs.findIndex(tab => tab.id === tabId);
-      if (tabIndex !== -1) {
-        this.tabs[tabIndex].content = content;
-      }
+    
+    // Créer la liste des onglets
+    const tabsList = document.createElement('div');
+    tabsList.className = 'tabs-list';
+    
+    // Ajouter chaque onglet
+    this.tabs.forEach(tab => {
+      const tabElement = this._createTabElement(tab);
+      tabsList.appendChild(tabElement);
+    });
+    
+    this.tabsContainer.appendChild(tabsList);
+    
+    // Ajouter le bouton de défilement droit si nécessaire
+    if (this.scrollable) {
+      this.scrollRightButton = document.createElement('button');
+      this.scrollRightButton.type = 'button';
+      this.scrollRightButton.className = 'tabs-scroll-button tabs-scroll-right';
+      this.scrollRightButton.innerHTML = '<span class="arrow-right"></span>';
+      this.scrollRightButton._handleScrollRight = this._handleScrollRight.bind(this);
+      this.scrollRightButton.addEventListener('click', this.scrollRightButton._handleScrollRight);
+      this.tabsContainer.appendChild(this.scrollRightButton);
     }
-  
-    /**
-     * Met à jour la notification d'un onglet
-     * @param {string} tabId - ID de l'onglet
-     * @param {number|string|null} notification - Valeur de notification
-     */
-    updateTabNotification(tabId, notification) {
-      // Vérifier si l'onglet existe
-      if (!this.tabButtons[tabId]) {
-        console.error(`Onglet introuvable: ${tabId}`);
-        return;
-      }
-      
-      // Trouver ou créer l'élément de notification
-      let notificationElement = this.tabButtons[tabId].querySelector('.tab-notification');
-      
-      if (notification === null || notification === undefined) {
-        // Supprimer la notification si elle existe
-        if (notificationElement) {
-          notificationElement.remove();
-        }
-      } else {
-        // Créer l'élément s'il n'existe pas
-        if (!notificationElement) {
-          notificationElement = document.createElement('span');
-          notificationElement.className = 'tab-notification';
-          this.tabButtons[tabId].appendChild(notificationElement);
-        }
-        
-        // Mettre à jour le contenu
-        if (typeof notification === 'number') {
-          notificationElement.textContent = notification > 99 ? '99+' : notification;
-        } else {
-          notificationElement.textContent = notification;
-        }
-      }
-      
-      // Mettre à jour l'objet de configuration
-      const tabIndex = this.tabs.findIndex(tab => tab.id === tabId);
-      if (tabIndex !== -1) {
-        this.tabs[tabIndex].notification = notification;
-      }
-    }
-  
-    /**
-     * Détruit le composant et ses écouteurs d'événements
-     */
-    destroy() {
-      if (this.element) {
-        // Supprimer les écouteurs d'événements
-        Object.values(this.tabButtons).forEach(button => {
-          button.replaceWith(button.cloneNode(true));
-        });
-        
-        if (this.swipeable) {
-          this.tabsContentElement.removeEventListener('touchstart', this._enableSwipe);
-          this.tabsContentElement.removeEventListener('touchend', this._enableSwipe);
-        }
-        
-        this.element = null;
-        this.tabsNavElement = null;
-        this.tabsContentElement = null;
-        this.tabButtons = {};
-        this.tabContents = {};
-      }
+    
+    // Ajouter au composant principal
+    this.element.appendChild(this.tabsContainer);
+    
+    // Mettre à jour les boutons de défilement après rendu
+    if (this.scrollable) {
+      // Utiliser setTimeout pour s'assurer que les dimensions sont calculées
+      setTimeout(() => {
+        this._updateScrollButtons();
+      }, 0);
     }
   }
   
-  // Exporter le composant
-  window.components = window.components || {};
-  window.components.Tabs = Tabs;
+  /**
+   * Crée le conteneur des contenus
+   * @private
+   */
+  _createContentsContainer() {
+    this.contentsContainer = document.createElement('div');
+    this.contentsContainer.className = 'tabs-contents';
+    
+    // Ajouter chaque contenu
+    this.tabs.forEach(tab => {
+      const contentElement = this._createContentElement(tab);
+      this.contentsContainer.appendChild(contentElement);
+    });
+    
+    // Ajouter au composant principal
+    this.element.appendChild(this.contentsContainer);
+  }
+  
+  /**
+   * Crée l'élément HTML d'un onglet
+   * @param {Object} tab - Données de l'onglet
+   * @returns {HTMLElement} L'élément de l'onglet
+   * @private
+   */
+  _createTabElement(tab) {
+    const tabElement = document.createElement('div');
+    tabElement.className = `tab-item ${this.activeTab === tab.id ? 'active' : ''}`;
+    tabElement.dataset.id = tab.id;
+    
+    // Icône si présente
+    if (tab.icon) {
+      const iconElement = document.createElement('span');
+      iconElement.className = `tab-icon ${tab.icon}`;
+      tabElement.appendChild(iconElement);
+    }
+    
+    // Libellé
+    const labelElement = document.createElement('span');
+    labelElement.className = 'tab-label';
+    labelElement.textContent = tab.label || 'Onglet';
+    tabElement.appendChild(labelElement);
+    
+    // Notification si présente
+    if (tab.notification) {
+      const notificationElement = document.createElement('span');
+      notificationElement.className = 'tab-notification';
+      notificationElement.textContent = tab.notification;
+      tabElement.appendChild(notificationElement);
+    }
+    
+    // Bouton de fermeture si l'onglet est fermable
+    if ((this.closable && tab.closable !== false) || tab.closable === true) {
+      const closeButton = document.createElement('span');
+      closeButton.className = 'tab-close';
+      closeButton.innerHTML = '&times;';
+      closeButton._clickHandler = (e) => {
+        e.stopPropagation();
+        this._handleTabClose(tab.id);
+      };
+      closeButton.addEventListener('click', closeButton._clickHandler);
+      tabElement.appendChild(closeButton);
+    }
+    
+    // Gestionnaire de clic sur l'onglet
+    tabElement._clickHandler = () => {
+      this.activateTab(tab.id);
+    };
+    tabElement.addEventListener('click', tabElement._clickHandler);
+    
+    return tabElement;
+  }
+  
+  /**
+   * Crée l'élément HTML du contenu d'un onglet
+   * @param {Object} tab - Données de l'onglet
+   * @returns {HTMLElement} L'élément du contenu
+   * @private
+   */
+  _createContentElement(tab) {
+    const contentElement = document.createElement('div');
+    contentElement.className = `tab-content ${this.activeTab === tab.id ? 'active' : ''}`;
+    contentElement.dataset.id = tab.id;
+    
+    // Ajouter le contenu
+    if (tab.content instanceof HTMLElement) {
+      contentElement.appendChild(tab.content);
+    } else if (typeof tab.content === 'string') {
+      contentElement.innerHTML = tab.content;
+    }
+    
+    return contentElement;
+  }
+  
+  /**
+   * Gère la fermeture d'un onglet
+   * @param {string} tabId - ID de l'onglet à fermer
+   * @private
+   */
+  _handleTabClose(tabId) {
+    // Exécuter le callback
+    const shouldClose = this.onTabClose(tabId);
+    
+    // Fermer l'onglet si le callback ne retourne pas false
+    if (shouldClose !== false) {
+      this.removeTab(tabId);
+    }
+  }
+  
+  /**
+   * Gère le défilement vers la gauche
+   * @private
+   */
+  _handleScrollLeft() {
+    if (!this.tabsContainer) return;
+    
+    const tabsList = this.tabsContainer.querySelector('.tabs-list');
+    const scrollAmount = tabsList.clientWidth * 0.5; // Défiler de 50% de la largeur visible
+    tabsList.scrollLeft -= scrollAmount;
+    
+    // Mettre à jour les boutons de défilement
+    setTimeout(() => {
+      this._updateScrollButtons();
+    }, 100);
+  }
+  
+  /**
+   * Gère le défilement vers la droite
+   * @private
+   */
+  _handleScrollRight() {
+    if (!this.tabsContainer) return;
+    
+    const tabsList = this.tabsContainer.querySelector('.tabs-list');
+    const scrollAmount = tabsList.clientWidth * 0.5; // Défiler de 50% de la largeur visible
+    tabsList.scrollLeft += scrollAmount;
+    
+    // Mettre à jour les boutons de défilement
+    setTimeout(() => {
+      this._updateScrollButtons();
+    }, 100);
+  }
+  
+  /**
+   * Met à jour l'état des boutons de défilement
+   * @private
+   */
+  _updateScrollButtons() {
+    if (!this.scrollable || !this.tabsContainer) return;
+    
+    const tabsList = this.tabsContainer.querySelector('.tabs-list');
+    
+    // Calculer si le défilement est possible
+    const canScrollLeft = tabsList.scrollLeft > 0;
+    const canScrollRight = tabsList.scrollLeft < (tabsList.scrollWidth - tabsList.clientWidth);
+    
+    // Mettre à jour l'état des boutons
+    this.scrollLeftButton.disabled = !canScrollLeft;
+    this.scrollRightButton.disabled = !canScrollRight;
+  }
+  
+  /**
+   * Fait défiler jusqu'à un onglet spécifique
+   * @param {HTMLElement} tabElement - Élément de l'onglet
+   * @private
+   */
+  _scrollToTab(tabElement) {
+    if (!this.scrollable || !this.tabsContainer) return;
+    
+    const tabsList = this.tabsContainer.querySelector('.tabs-list');
+    
+    // Obtenir la position de l'onglet
+    const tabRect = tabElement.getBoundingClientRect();
+    const tabsListRect = tabsList.getBoundingClientRect();
+    
+    // Vérifier si l'onglet est visible
+    const isVisible = (tabRect.left >= tabsListRect.left) && 
+                      (tabRect.right <= tabsListRect.right);
+    
+    if (!isVisible) {
+      // Calculer la position de défilement
+      if (tabRect.left < tabsListRect.left) {
+        // Onglet à gauche de la zone visible
+        tabsList.scrollLeft += (tabRect.left - tabsListRect.left);
+      } else {
+        // Onglet à droite de la zone visible
+        tabsList.scrollLeft += (tabRect.right - tabsListRect.right);
+      }
+      
+      // Mettre à jour les boutons de défilement
+      setTimeout(() => {
+        this._updateScrollButtons();
+      }, 100);
+    }
+  }
+}
+
+// Exposer le composant dans l'espace de nommage global
+window.components = window.components || {};
+window.components.Tabs = Tabs;

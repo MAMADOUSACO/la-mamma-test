@@ -1,481 +1,548 @@
 /**
- * Composant Card - Conteneur de type carte
- * 
- * Utilisation:
- * const card = new Card({
- *   title: 'Titre de la carte',
- *   content: 'Contenu de la carte',
- *   footer: 'Pied de la carte'
- * });
- * container.appendChild(card.render());
+ * Composant Card - Conteneur stylisé pour le contenu
+ * Fichier: js/components/common/Card.js
  */
 
 class Card {
-    /**
-     * Constructeur
-     * @param {Object} options - Options de la carte
-     * @param {string|HTMLElement} options.title - Titre de la carte
-     * @param {string|HTMLElement} options.content - Contenu de la carte
-     * @param {string|HTMLElement} options.footer - Pied de la carte
-     * @param {Array} options.actions - Actions dans l'en-tête
-     * @param {boolean} options.collapsible - Si la carte peut être réduite
-     * @param {boolean} options.collapsed - État initial (réduit ou non)
-     * @param {string} options.className - Classes CSS additionnelles
-     * @param {string} options.id - ID du composant
-     * @param {boolean} options.noPadding - Supprime le padding du contenu
-     */
-    constructor(options = {}) {
-      this.title = options.title || '';
-      this.content = options.content || '';
-      this.footer = options.footer || '';
-      this.actions = options.actions || [];
-      this.collapsible = options.collapsible || false;
-      this.collapsed = options.collapsed || false;
-      this.className = options.className || '';
-      this.id = options.id || 'card-' + Date.now();
-      this.noPadding = options.noPadding || false;
-      
-      this.element = null;
-      this.headerElement = null;
-      this.contentElement = null;
-      this.footerElement = null;
+  /**
+   * Constructeur du composant Card
+   * @param {Object} options - Options de configuration
+   * @param {string} options.title - Titre de la carte
+   * @param {string|HTMLElement} options.content - Contenu de la carte
+   * @param {Array} options.actions - Actions dans l'en-tête de la carte
+   * @param {string} options.footer - Contenu du pied de la carte
+   * @param {boolean} options.collapsible - Si true, la carte peut être réduite
+   * @param {boolean} options.collapsed - État initial (réduit ou non)
+   * @param {string} options.icon - Icône à côté du titre
+   * @param {string} options.className - Classes CSS additionnelles
+   * @param {boolean} options.fullHeight - Si true, prend toute la hauteur disponible
+   * @param {boolean} options.bordered - Si true, affiche une bordure
+   * @param {boolean} options.shadow - Si true, affiche une ombre
+   * @param {boolean} options.loading - Si true, affiche un état de chargement
+   */
+  constructor(options = {}) {
+    this.title = options.title || '';
+    this.content = options.content || '';
+    this.actions = options.actions || [];
+    this.footer = options.footer || '';
+    this.collapsible = options.collapsible || false;
+    this.collapsed = options.collapsed || false;
+    this.icon = options.icon || '';
+    this.className = options.className || '';
+    this.fullHeight = options.fullHeight || false;
+    this.bordered = options.bordered !== undefined ? options.bordered : true;
+    this.shadow = options.shadow !== undefined ? options.shadow : true;
+    this.loading = options.loading || false;
+    
+    this.element = null;
+    this.headerElement = null;
+    this.bodyElement = null;
+    this.footerElement = null;
+    this.collapseButton = null;
+    this.actionsContainer = null;
+    this.loadingOverlay = null;
+  }
+
+  /**
+   * Génère et retourne l'élément HTML de la carte
+   * @returns {HTMLElement} L'élément de la carte
+   */
+  render() {
+    // Créer l'élément principal
+    this.element = document.createElement('div');
+    
+    // Construire les classes CSS
+    let cssClasses = ['card'];
+    
+    if (this.fullHeight) cssClasses.push('card-full-height');
+    if (this.bordered) cssClasses.push('card-bordered');
+    if (this.shadow) cssClasses.push('card-shadow');
+    if (this.className) cssClasses.push(this.className);
+    
+    this.element.className = cssClasses.join(' ');
+    
+    // Créer l'en-tête si un titre, une icône ou des actions sont définis
+    if (this.title || this.icon || this.actions.length > 0 || this.collapsible) {
+      this._createHeader();
     }
-  
-    /**
-     * Rend le composant carte
-     * @returns {HTMLElement} - Élément carte
-     */
-    render() {
-      // Créer l'élément principal
-      this.element = document.createElement('div');
-      this.element.className = 'card';
-      this.element.id = this.id;
-      
-      if (this.className) {
-        this.className.split(' ').forEach(cls => {
-          if (cls) {
-            this.element.classList.add(cls);
-          }
-        });
-      }
-      
-      if (this.collapsed) {
-        this.element.classList.add('card-collapsed');
-      }
-      
-      // Créer l'en-tête si un titre ou des actions sont spécifiés
-      if (this.title || this.actions.length > 0 || this.collapsible) {
-        this.headerElement = this._createHeader();
-        this.element.appendChild(this.headerElement);
-      }
-      
-      // Créer le corps
-      this.contentElement = this._createContent();
-      this.element.appendChild(this.contentElement);
-      
-      // Créer le pied de page si spécifié
-      if (this.footer) {
-        this.footerElement = this._createFooter();
-        this.element.appendChild(this.footerElement);
-      }
-      
-      return this.element;
+    
+    // Créer le corps de la carte
+    this._createBody();
+    
+    // Créer le pied de la carte si défini
+    if (this.footer) {
+      this._createFooter();
     }
-  
-    /**
-     * Crée l'en-tête de la carte
-     * @returns {HTMLElement} - Élément d'en-tête
-     * @private
-     */
-    _createHeader() {
-      const header = document.createElement('div');
-      header.className = 'card-header';
-      
-      // Ajouter le titre
-      if (this.title) {
-        const titleElement = document.createElement('div');
-        titleElement.className = 'card-title';
-        
-        if (typeof this.title === 'string') {
-          titleElement.textContent = this.title;
-        } else if (this.title instanceof HTMLElement) {
-          titleElement.appendChild(this.title);
-        }
-        
-        header.appendChild(titleElement);
-      }
-      
-      // Ajouter les actions
-      if (this.actions.length > 0 || this.collapsible) {
-        const actionsContainer = document.createElement('div');
-        actionsContainer.className = 'card-actions';
-        
-        // Ajouter les actions personnalisées
-        this.actions.forEach(action => {
-          // Si l'action est déjà un élément HTML, l'ajouter directement
-          if (action instanceof HTMLElement) {
-            actionsContainer.appendChild(action);
-            return;
-          }
-          
-          // Si l'action utilise le composant Button
-          if (window.components && window.components.Button && action.type) {
-            const buttonConfig = {
-              ...action,
-              size: action.size || 'small',
-              isIconOnly: action.isIconOnly !== false && action.icon
-            };
-            
-            const button = new window.components.Button(buttonConfig);
-            actionsContainer.appendChild(button.render());
-          } else {
-            // Créer un bouton standard
-            const button = document.createElement('button');
-            button.className = `btn btn-${action.type || 'outline'} btn-small`;
-            
-            if (action.icon) {
-              const iconSpan = document.createElement('span');
-              iconSpan.className = `icon icon-${action.icon}`;
-              button.appendChild(iconSpan);
-            }
-            
-            if (action.text && (!action.icon || !action.isIconOnly)) {
-              const textSpan = document.createElement('span');
-              textSpan.textContent = action.text;
-              button.appendChild(textSpan);
-            }
-            
-            if (action.onClick && typeof action.onClick === 'function') {
-              button.addEventListener('click', action.onClick);
-            }
-            
-            actionsContainer.appendChild(button);
-          }
-        });
-        
-        // Ajouter le bouton de réduction si la carte est réductible
-        if (this.collapsible) {
-          const collapseButton = document.createElement('button');
-          collapseButton.className = 'card-collapse-btn';
-          collapseButton.type = 'button';
-          collapseButton.innerHTML = `
-            <svg class="collapse-icon" viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor" d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
-            </svg>
-            <svg class="expand-icon" viewBox="0 0 24 24" width="18" height="18">
-              <path fill="currentColor" d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/>
-            </svg>
-          `;
-          
-          collapseButton.addEventListener('click', () => {
-            this.toggle();
-          });
-          
-          actionsContainer.appendChild(collapseButton);
-        }
-        
-        header.appendChild(actionsContainer);
-      }
-      
-      return header;
+    
+    // Appliquer l'état initial de collapse
+    if (this.collapsible && this.collapsed) {
+      this._collapse(false);
     }
-  
-    /**
-     * Crée le corps de la carte
-     * @returns {HTMLElement} - Élément de corps
-     * @private
-     */
-    _createContent() {
-      const content = document.createElement('div');
-      content.className = 'card-content';
-      
-      if (this.noPadding) {
-        content.classList.add('card-content-no-padding');
-      }
-      
-      if (typeof this.content === 'string') {
-        content.innerHTML = this.content;
-      } else if (this.content instanceof HTMLElement) {
-        content.appendChild(this.content);
-      }
-      
-      return content;
+    
+    // Appliquer l'état de chargement si nécessaire
+    if (this.loading) {
+      this.setLoading(true);
     }
+    
+    return this.element;
+  }
   
-    /**
-     * Crée le pied de page de la carte
-     * @returns {HTMLElement} - Élément de pied de page
-     * @private
-     */
-    _createFooter() {
-      const footer = document.createElement('div');
-      footer.className = 'card-footer';
+  /**
+   * Définit le titre de la carte
+   * @param {string} title - Nouveau titre
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setTitle(title) {
+    this.title = title;
+    
+    if (this.element) {
+      let titleElement = this.element.querySelector('.card-title');
       
-      if (typeof this.footer === 'string') {
-        footer.innerHTML = this.footer;
-      } else if (this.footer instanceof HTMLElement) {
-        footer.appendChild(this.footer);
-      }
-      
-      return footer;
-    }
-  
-    /**
-     * Bascule l'état réduit/étendu de la carte
-     * @returns {boolean} - Nouvel état (true = réduit, false = étendu)
-     */
-    toggle() {
-      if (!this.collapsible) return false;
-      
-      this.collapsed = !this.collapsed;
-      
-      if (this.element) {
-        if (this.collapsed) {
-          this.element.classList.add('card-collapsed');
+      if (title) {
+        if (titleElement) {
+          // Mettre à jour le titre existant
+          titleElement.textContent = title;
+        } else if (!this.headerElement) {
+          // Créer l'en-tête s'il n'existe pas
+          this._createHeader();
         } else {
-          this.element.classList.remove('card-collapsed');
-        }
-      }
-      
-      return this.collapsed;
-    }
-  
-    /**
-     * Réduit la carte
-     */
-    collapse() {
-      if (this.collapsible && !this.collapsed) {
-        this.toggle();
-      }
-    }
-  
-    /**
-     * Étend la carte
-     */
-    expand() {
-      if (this.collapsible && this.collapsed) {
-        this.toggle();
-      }
-    }
-  
-    /**
-     * Met à jour le contenu de la carte
-     * @param {string|HTMLElement} content - Nouveau contenu
-     */
-    setContent(content) {
-      this.content = content;
-      
-      if (this.contentElement) {
-        // Vider le contenu
-        this.contentElement.innerHTML = '';
-        
-        if (typeof content === 'string') {
-          this.contentElement.innerHTML = content;
-        } else if (content instanceof HTMLElement) {
-          this.contentElement.appendChild(content);
-        }
-      }
-    }
-  
-    /**
-     * Met à jour le titre de la carte
-     * @param {string|HTMLElement} title - Nouveau titre
-     */
-    setTitle(title) {
-      this.title = title;
-      
-      if (this.headerElement) {
-        let titleElement = this.headerElement.querySelector('.card-title');
-        
-        if (title) {
-          if (titleElement) {
-            // Vider le titre
-            titleElement.innerHTML = '';
-            
-            // Ajouter le nouveau titre
-            if (typeof title === 'string') {
-              titleElement.textContent = title;
-            } else if (title instanceof HTMLElement) {
-              titleElement.appendChild(title);
-            }
+          // Créer l'élément titre dans l'en-tête existant
+          titleElement = document.createElement('div');
+          titleElement.className = 'card-title';
+          titleElement.textContent = title;
+          
+          // Insérer après l'icône si elle existe, sinon en premier
+          const iconElement = this.headerElement.querySelector('.card-icon');
+          if (iconElement) {
+            this.headerElement.insertBefore(titleElement, iconElement.nextSibling);
           } else {
-            // Créer un nouvel élément titre
-            titleElement = document.createElement('div');
-            titleElement.className = 'card-title';
-            
-            if (typeof title === 'string') {
-              titleElement.textContent = title;
-            } else if (title instanceof HTMLElement) {
-              titleElement.appendChild(title);
-            }
-            
-            // Insérer au début du header
             this.headerElement.insertBefore(titleElement, this.headerElement.firstChild);
           }
-        } else if (titleElement && titleElement.parentNode) {
-          // Supprimer le titre si le nouveau titre est vide
-          titleElement.parentNode.removeChild(titleElement);
         }
-      } else if (title) {
-        // Créer un nouveau header si nécessaire
-        this.headerElement = this._createHeader();
+      } else if (titleElement) {
+        // Supprimer le titre si vide
+        titleElement.parentNode.removeChild(titleElement);
         
-        if (this.element.firstChild) {
-          this.element.insertBefore(this.headerElement, this.element.firstChild);
+        // Supprimer l'en-tête s'il est vide
+        this._removeHeaderIfEmpty();
+      }
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Définit le contenu de la carte
+   * @param {string|HTMLElement} content - Nouveau contenu
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setContent(content) {
+    this.content = content;
+    
+    if (this.bodyElement) {
+      // Vider le contenu actuel
+      this.bodyElement.innerHTML = '';
+      
+      // Ajouter le nouveau contenu
+      if (content instanceof HTMLElement) {
+        this.bodyElement.appendChild(content);
+      } else if (typeof content === 'string') {
+        this.bodyElement.innerHTML = content;
+      }
+    } else {
+      // Créer le corps si nécessaire
+      this._createBody();
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Définit le pied de la carte
+   * @param {string|HTMLElement} footer - Nouveau pied
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setFooter(footer) {
+    this.footer = footer;
+    
+    if (footer) {
+      if (this.footerElement) {
+        // Mettre à jour le pied existant
+        this.footerElement.innerHTML = '';
+        
+        if (footer instanceof HTMLElement) {
+          this.footerElement.appendChild(footer);
         } else {
-          this.element.appendChild(this.headerElement);
+          this.footerElement.innerHTML = footer;
         }
+      } else {
+        // Créer le pied s'il n'existe pas
+        this._createFooter();
       }
+    } else if (this.footerElement) {
+      // Supprimer le pied s'il est vide
+      this.element.removeChild(this.footerElement);
+      this.footerElement = null;
     }
+    
+    return this;
+  }
   
-    /**
-     * Met à jour le pied de page de la carte
-     * @param {string|HTMLElement} footer - Nouveau pied de page
-     */
-    setFooter(footer) {
-      this.footer = footer;
-      
-      if (this.footerElement && this.footerElement.parentNode) {
-        // Supprimer le footer existant
-        this.footerElement.parentNode.removeChild(this.footerElement);
-        this.footerElement = null;
-      }
-      
-      if (footer) {
-        // Créer un nouveau footer
-        this.footerElement = this._createFooter();
-        this.element.appendChild(this.footerElement);
-      }
-    }
-  
-    /**
-     * Met à jour les actions de la carte
-     * @param {Array} actions - Nouvelles actions
-     */
-    setActions(actions) {
-      this.actions = actions || [];
-      
-      if (this.headerElement) {
-        let actionsContainer = this.headerElement.querySelector('.card-actions');
-        
-        if (actionsContainer) {
-          // Supprimer toutes les actions sauf le bouton de réduction
-          const collapseButton = actionsContainer.querySelector('.card-collapse-btn');
-          actionsContainer.innerHTML = '';
+  /**
+   * Met à jour les actions dans l'en-tête
+   * @param {Array} actions - Nouvelles actions
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setActions(actions) {
+    this.actions = actions || [];
+    
+    if (this.element) {
+      if (actions.length > 0) {
+        if (this.actionsContainer) {
+          // Mettre à jour les actions existantes
+          this._renderActions();
+        } else if (!this.headerElement) {
+          // Créer l'en-tête s'il n'existe pas
+          this._createHeader();
+        } else {
+          // Créer le conteneur d'actions dans l'en-tête existant
+          this.actionsContainer = document.createElement('div');
+          this.actionsContainer.className = 'card-actions';
+          this.headerElement.appendChild(this.actionsContainer);
           
-          if (collapseButton) {
-            actionsContainer.appendChild(collapseButton);
-          }
-        } else if (this.actions.length > 0 || this.collapsible) {
-          // Créer un nouveau conteneur d'actions
-          actionsContainer = document.createElement('div');
-          actionsContainer.className = 'card-actions';
-          this.headerElement.appendChild(actionsContainer);
-        } else {
-          return; // Rien à faire si pas d'actions ni de bouton de réduction
+          // Rendre les actions
+          this._renderActions();
         }
+      } else if (this.actionsContainer) {
+        // Supprimer le conteneur d'actions s'il est vide
+        this.actionsContainer.parentNode.removeChild(this.actionsContainer);
+        this.actionsContainer = null;
         
-        // Ajouter les nouvelles actions
-        this.actions.forEach(action => {
-          // Si l'action est déjà un élément HTML, l'ajouter directement
-          if (action instanceof HTMLElement) {
-            actionsContainer.insertBefore(action, collapseButton);
-            return;
-          }
+        // Supprimer l'en-tête s'il est vide
+        this._removeHeaderIfEmpty();
+      }
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Réduit ou développe la carte
+   * @param {boolean} collapsed - Si true, réduit la carte
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setCollapsed(collapsed) {
+    if (!this.collapsible) return this;
+    
+    this.collapsed = collapsed;
+    
+    if (this.element) {
+      this._collapse(!collapsed);
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Active ou désactive l'état de chargement
+   * @param {boolean} loading - Si true, active l'état de chargement
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  setLoading(loading) {
+    this.loading = loading;
+    
+    if (this.element) {
+      if (loading) {
+        if (!this.loadingOverlay) {
+          // Créer l'overlay de chargement
+          this.loadingOverlay = document.createElement('div');
+          this.loadingOverlay.className = 'card-loading-overlay';
           
-          // Si l'action utilise le composant Button
-          if (window.components && window.components.Button && action.type) {
-            const buttonConfig = {
-              ...action,
-              size: action.size || 'small',
-              isIconOnly: action.isIconOnly !== false && action.icon
-            };
-            
-            const button = new window.components.Button(buttonConfig);
-            actionsContainer.insertBefore(button.render(), collapseButton);
-          } else {
-            // Créer un bouton standard
-            const button = document.createElement('button');
-            button.className = `btn btn-${action.type || 'outline'} btn-small`;
-            
-            if (action.icon) {
-              const iconSpan = document.createElement('span');
-              iconSpan.className = `icon icon-${action.icon}`;
-              button.appendChild(iconSpan);
-            }
-            
-            if (action.text && (!action.icon || !action.isIconOnly)) {
-              const textSpan = document.createElement('span');
-              textSpan.textContent = action.text;
-              button.appendChild(textSpan);
-            }
-            
-            if (action.onClick && typeof action.onClick === 'function') {
-              button.addEventListener('click', action.onClick);
-            }
-            
-            actionsContainer.insertBefore(button, collapseButton);
-          }
-        });
-      } else if (this.actions.length > 0 || this.collapsible) {
-        // Créer un nouveau header si nécessaire
-        this.headerElement = this._createHeader();
-        
-        if (this.element.firstChild) {
-          this.element.insertBefore(this.headerElement, this.element.firstChild);
-        } else {
-          this.element.appendChild(this.headerElement);
+          // Créer le spinner
+          const spinner = new window.components.Spinner({
+            size: 'medium',
+            color: 'primary'
+          });
+          
+          this.loadingOverlay.appendChild(spinner.render());
+          this.element.appendChild(this.loadingOverlay);
         }
+      } else if (this.loadingOverlay) {
+        // Supprimer l'overlay de chargement
+        this.element.removeChild(this.loadingOverlay);
+        this.loadingOverlay = null;
       }
     }
+    
+    return this;
+  }
   
-    /**
-     * Ajoute une classe CSS à la carte
-     * @param {string} className - Classe à ajouter
-     */
-    addClass(className) {
-      if (this.element) {
-        this.element.classList.add(className);
-      }
+  /**
+   * Ajoute une classe CSS à la carte
+   * @param {string} className - Classe à ajouter
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  addClass(className) {
+    if (this.element) {
+      this.element.classList.add(className);
+    } else {
+      this.className += ` ${className}`;
     }
+    
+    return this;
+  }
   
-    /**
-     * Supprime une classe CSS de la carte
-     * @param {string} className - Classe à supprimer
-     */
-    removeClass(className) {
-      if (this.element) {
-        this.element.classList.remove(className);
-      }
+  /**
+   * Supprime une classe CSS de la carte
+   * @param {string} className - Classe à supprimer
+   * @returns {Card} L'instance courante pour chaînage
+   */
+  removeClass(className) {
+    if (this.element) {
+      this.element.classList.remove(className);
+    } else {
+      this.className = this.className.replace(new RegExp(`\\b${className}\\b`, 'g'), '');
     }
+    
+    return this;
+  }
   
-    /**
-     * Détruit le composant et ses écouteurs d'événements
-     */
-    destroy() {
-      if (this.element) {
-        // Supprimer les écouteurs d'événements
-        const buttons = this.element.querySelectorAll('button');
-        buttons.forEach(button => {
-          const newButton = button.cloneNode(true);
-          if (button.parentNode) {
-            button.parentNode.replaceChild(newButton, button);
-          }
-        });
-        
-        // Supprimer l'élément
-        if (this.element.parentNode) {
-          this.element.parentNode.removeChild(this.element);
-        }
-        
-        this.element = null;
-        this.headerElement = null;
-        this.contentElement = null;
-        this.footerElement = null;
-      }
+  /**
+   * Nettoie les ressources utilisées par le composant
+   */
+  destroy() {
+    // Nettoyer les écouteurs d'événements
+    if (this.collapseButton) {
+      this.collapseButton.removeEventListener('click', this._handleCollapseClick);
+    }
+    
+    if (this.actionsContainer) {
+      const actionButtons = this.actionsContainer.querySelectorAll('button');
+      actionButtons.forEach(button => {
+        button.removeEventListener('click', button._clickHandler);
+      });
+    }
+    
+    // Supprimer l'élément du DOM s'il est attaché
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.removeChild(this.element);
+    }
+    
+    // Réinitialiser les références
+    this.element = null;
+    this.headerElement = null;
+    this.bodyElement = null;
+    this.footerElement = null;
+    this.collapseButton = null;
+    this.actionsContainer = null;
+    this.loadingOverlay = null;
+  }
+  
+  /* Méthodes privées */
+  
+  /**
+   * Crée l'en-tête de la carte
+   * @private
+   */
+  _createHeader() {
+    this.headerElement = document.createElement('div');
+    this.headerElement.className = 'card-header';
+    
+    // Ajouter l'icône si présente
+    if (this.icon) {
+      const iconElement = document.createElement('div');
+      iconElement.className = 'card-icon';
+      
+      const iconSpan = document.createElement('span');
+      iconSpan.className = this.icon;
+      iconElement.appendChild(iconSpan);
+      
+      this.headerElement.appendChild(iconElement);
+    }
+    
+    // Ajouter le titre si présent
+    if (this.title) {
+      const titleElement = document.createElement('div');
+      titleElement.className = 'card-title';
+      titleElement.textContent = this.title;
+      
+      this.headerElement.appendChild(titleElement);
+    }
+    
+    // Ajouter le bouton de collapse si la carte est collapsible
+    if (this.collapsible) {
+      this.collapseButton = document.createElement('button');
+      this.collapseButton.type = 'button';
+      this.collapseButton.className = 'card-collapse-button';
+      this.collapseButton.innerHTML = '<span class="collapse-icon"></span>';
+      this.collapseButton.addEventListener('click', this._handleCollapseClick.bind(this));
+      
+      this.headerElement.appendChild(this.collapseButton);
+    }
+    
+    // Ajouter les actions si présentes
+    if (this.actions.length > 0) {
+      this.actionsContainer = document.createElement('div');
+      this.actionsContainer.className = 'card-actions';
+      
+      this._renderActions();
+      
+      this.headerElement.appendChild(this.actionsContainer);
+    }
+    
+    // Insérer l'en-tête en premier dans la carte
+    if (this.element.firstChild) {
+      this.element.insertBefore(this.headerElement, this.element.firstChild);
+    } else {
+      this.element.appendChild(this.headerElement);
     }
   }
   
-  // Exporter le composant
-  window.components = window.components || {};
-  window.components.Card = Card;
+  /**
+   * Crée le corps de la carte
+   * @private
+   */
+  _createBody() {
+    this.bodyElement = document.createElement('div');
+    this.bodyElement.className = 'card-body';
+    
+    // Ajouter le contenu
+    if (this.content instanceof HTMLElement) {
+      this.bodyElement.appendChild(this.content);
+    } else if (typeof this.content === 'string') {
+      this.bodyElement.innerHTML = this.content;
+    }
+    
+    // Insérer le corps après l'en-tête s'il existe, sinon en premier
+    if (this.headerElement && this.headerElement.nextSibling) {
+      this.element.insertBefore(this.bodyElement, this.headerElement.nextSibling);
+    } else if (this.headerElement) {
+      this.element.appendChild(this.bodyElement);
+    } else if (this.element.firstChild) {
+      this.element.insertBefore(this.bodyElement, this.element.firstChild);
+    } else {
+      this.element.appendChild(this.bodyElement);
+    }
+  }
+  
+  /**
+   * Crée le pied de la carte
+   * @private
+   */
+  _createFooter() {
+    this.footerElement = document.createElement('div');
+    this.footerElement.className = 'card-footer';
+    
+    // Ajouter le contenu du pied
+    if (this.footer instanceof HTMLElement) {
+      this.footerElement.appendChild(this.footer);
+    } else {
+      this.footerElement.innerHTML = this.footer;
+    }
+    
+    // Ajouter le pied à la fin de la carte
+    this.element.appendChild(this.footerElement);
+  }
+  
+  /**
+   * Rend les actions dans l'en-tête
+   * @private
+   */
+  _renderActions() {
+    if (!this.actionsContainer) return;
+    
+    // Vider le conteneur
+    this.actionsContainer.innerHTML = '';
+    
+    // Ajouter chaque action
+    this.actions.forEach(action => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `card-action-button ${action.className || ''}`;
+      
+      if (action.title) {
+        button.title = action.title;
+      }
+      
+      // Contenu du bouton (icône ou texte)
+      if (action.icon) {
+        const icon = document.createElement('span');
+        icon.className = action.icon;
+        button.appendChild(icon);
+      } else {
+        button.textContent = action.text || '';
+      }
+      
+      // Gestionnaire de clic
+      button._clickHandler = () => {
+        if (typeof action.onClick === 'function') {
+          action.onClick();
+        }
+      };
+      
+      button.addEventListener('click', button._clickHandler);
+      this.actionsContainer.appendChild(button);
+    });
+  }
+  
+  /**
+   * Gère le clic sur le bouton de collapse
+   * @private
+   */
+  _handleCollapseClick() {
+    this.setCollapsed(!this.collapsed);
+  }
+  
+  /**
+   * Réduit ou développe la carte
+   * @param {boolean} show - Si true, développe la carte
+   * @private
+   */
+  _collapse(show) {
+    if (!this.bodyElement) return;
+    
+    if (show) {
+      this.bodyElement.style.display = '';
+      if (this.footerElement) {
+        this.footerElement.style.display = '';
+      }
+      if (this.collapseButton) {
+        this.collapseButton.classList.remove('collapsed');
+      }
+      this.element.classList.remove('card-collapsed');
+    } else {
+      this.bodyElement.style.display = 'none';
+      if (this.footerElement) {
+        this.footerElement.style.display = 'none';
+      }
+      if (this.collapseButton) {
+        this.collapseButton.classList.add('collapsed');
+      }
+      this.element.classList.add('card-collapsed');
+    }
+  }
+  
+  /**
+   * Supprime l'en-tête s'il est vide
+   * @private
+   */
+  _removeHeaderIfEmpty() {
+    if (!this.headerElement) return;
+    
+    // Vérifier s'il reste des éléments dans l'en-tête
+    const hasTitle = !!this.headerElement.querySelector('.card-title');
+    const hasIcon = !!this.headerElement.querySelector('.card-icon');
+    const hasActions = !!this.actionsContainer && this.actionsContainer.children.length > 0;
+    const hasCollapseButton = !!this.collapseButton;
+    
+    if (!hasTitle && !hasIcon && !hasActions && !hasCollapseButton) {
+      // Supprimer l'en-tête s'il est vide
+      this.element.removeChild(this.headerElement);
+      this.headerElement = null;
+    }
+  }
+}
+
+// Exposer le composant dans l'espace de nommage global
+window.components = window.components || {};
+window.components.Card = Card;
