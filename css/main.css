@@ -1,0 +1,389 @@
+/**
+ * Styles principaux pour l'application LA MAMMA
+ * Optimisés pour l'utilisation tactile sur tablette
+ */
+
+/* Variables globales */
+:root {
+    /* Palette de couleurs */
+    --primary-color: #E74C3C; /* Rouge "tomate italienne" */
+    --primary-dark: #C0392B;
+    --primary-light: #F5B7B1;
+    --secondary-color: #2ECC71; /* Vert "basilic" */
+    --secondary-dark: #27AE60;
+    --accent-color: #F1C40F; /* Jaune "parmesan" */
+    --background-color: #FFFFFF;
+    --surface-color: #F8F9FA;
+    --error-color: #E74C3C;
+    --warning-color: #F39C12;
+    --success-color: #2ECC71;
+    --info-color: #3498DB;
+    
+    /* Texte et typographie */
+    --text-primary: #333333;
+    --text-secondary: #7F8C8D;
+    --text-disabled: #BDC3C7;
+    --text-on-primary: #FFFFFF;
+    --text-on-secondary: #FFFFFF;
+    --font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* Espacement */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Bordures */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 16px;
+    --border-width: 1px;
+    --border-color: #DDDDDD;
+    
+    /* Ombres */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15), 0 5px 10px rgba(0, 0, 0, 0.12);
+    
+    /* Dimensions spécifiques tablette */
+    --header-height: 60px;
+    --footer-height: 56px;
+    --tab-bar-height: 48px;
+    --nav-width-landscape: 250px;
+    --touch-target-size: 48px; /* Taille minimale pour cible tactile */
+  }
+  
+  /* Reset et base */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    font-family: var(--font-family);
+    color: var(--text-primary);
+    background-color: var(--background-color);
+    line-height: 1.5;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Empêche le zoom sur double-tap sur iOS */
+  button, 
+  input, 
+  select, 
+  textarea {
+    font-size: 16px; /* Empêche le zoom sur les inputs sur iOS */
+  }
+  
+  /* Layout principal */
+  #app {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .main-container {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--spacing-md);
+  }
+  
+  /* Navigation et headers */
+  .header {
+    height: var(--header-height);
+    background-color: var(--primary-color);
+    color: var(--text-on-primary);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--spacing-md);
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .tab-bar {
+    height: var(--tab-bar-height);
+    background-color: var(--surface-color);
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-bottom: var(--border-width) solid var(--border-color);
+  }
+  
+  .footer {
+    height: var(--footer-height);
+    background-color: var(--surface-color);
+    border-top: var(--border-width) solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+  }
+  
+  /* Éléments de navigation */
+  .nav-item {
+    padding: var(--spacing-md);
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+  
+  .nav-item.active {
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+  }
+  
+  .nav-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  
+  .nav-text {
+    font-size: 12px;
+  }
+  
+  /* Composants communs */
+  .card {
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-md);
+    overflow: hidden;
+  }
+  
+  .card-header {
+    padding: var(--spacing-md);
+    border-bottom: var(--border-width) solid var(--border-color);
+    font-weight: bold;
+  }
+  
+  .card-content {
+    padding: var(--spacing-md);
+  }
+  
+  .card-footer {
+    padding: var(--spacing-md);
+    border-top: var(--border-width) solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  /* Boutons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--touch-target-size);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s, transform 0.1s;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: var(--text-on-primary);
+  }
+  
+  .btn-primary:active {
+    background-color: var(--primary-dark);
+    transform: translateY(1px);
+  }
+  
+  .btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-on-secondary);
+  }
+  
+  .btn-secondary:active {
+    background-color: var(--secondary-dark);
+    transform: translateY(1px);
+  }
+  
+  .btn-outline {
+    background-color: transparent;
+    border: var(--border-width) solid var(--primary-color);
+    color: var(--primary-color);
+  }
+  
+  .btn-outline:active {
+    background-color: rgba(231, 76, 60, 0.1);
+    transform: translateY(1px);
+  }
+  
+  .btn-icon {
+    min-width: var(--touch-target-size);
+    min-height: var(--touch-target-size);
+    border-radius: 50%;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Formulaires */
+  .form-group {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    min-height: var(--touch-target-size);
+    background-color: var(--background-color);
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.25);
+  }
+  
+  /* Grilles */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--spacing-md);
+  }
+  
+  /* Grille adaptée pour les tablettes en mode paysage */
+  @media (min-width: 768px) and (orientation: landscape) {
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+  }
+  
+  /* Utilitaires */
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-left { text-align: left; }
+  
+  .mb-0 { margin-bottom: 0; }
+  .mb-xs { margin-bottom: var(--spacing-xs); }
+  .mb-sm { margin-bottom: var(--spacing-sm); }
+  .mb-md { margin-bottom: var(--spacing-md); }
+  .mb-lg { margin-bottom: var(--spacing-lg); }
+  
+  .mt-0 { margin-top: 0; }
+  .mt-xs { margin-top: var(--spacing-xs); }
+  .mt-sm { margin-top: var(--spacing-sm); }
+  .mt-md { margin-top: var(--spacing-md); }
+  .mt-lg { margin-top: var(--spacing-lg); }
+  
+  .ml-xs { margin-left: var(--spacing-xs); }
+  .ml-sm { margin-left: var(--spacing-sm); }
+  .ml-md { margin-left: var(--spacing-md); }
+  
+  .mr-xs { margin-right: var(--spacing-xs); }
+  .mr-sm { margin-right: var(--spacing-sm); }
+  .mr-md { margin-right: var(--spacing-md); }
+  
+  .p-xs { padding: var(--spacing-xs); }
+  .p-sm { padding: var(--spacing-sm); }
+  .p-md { padding: var(--spacing-md); }
+  .p-lg { padding: var(--spacing-lg); }
+  
+  .text-primary { color: var(--primary-color); }
+  .text-secondary { color: var(--secondary-color); }
+  .text-error { color: var(--error-color); }
+  .text-success { color: var(--success-color); }
+  .text-warning { color: var(--warning-color); }
+  .text-info { color: var(--info-color); }
+  
+  .bg-primary { background-color: var(--primary-color); }
+  .bg-secondary { background-color: var(--secondary-color); }
+  .bg-surface { background-color: var(--surface-color); }
+  
+  .d-flex { display: flex; }
+  .flex-column { flex-direction: column; }
+  .flex-row { flex-direction: row; }
+  .justify-between { justify-content: space-between; }
+  .justify-center { justify-content: center; }
+  .align-center { align-items: center; }
+  .flex-wrap { flex-wrap: wrap; }
+  .flex-grow { flex-grow: 1; }
+  
+  /* Affichage et masquage conditionnel */
+  .hidden { display: none !important; }
+  .visible { display: block !important; }
+  
+  /* Orientation spécifique */
+  @media (orientation: portrait) {
+    .landscape-only {
+      display: none !important;
+    }
+  }
+  
+  @media (orientation: landscape) {
+    .portrait-only {
+      display: none !important;
+    }
+  }
+  
+  /* Spinner de chargement */
+  .loading-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--primary-light);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }

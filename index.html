@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Logiciel de gestion pour le restaurant LA MAMMA">
+    <meta name="theme-color" content="#E74C3C">
+    <title>LA MAMMA - Gestion Restaurant</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <!-- Modules CSS spécifiques seront chargés dynamiquement selon la page -->
+</head>
+<body>
+    <div id="app">
+        <!-- L'application sera rendue ici -->
+        <div id="loading-spinner" class="loading-container">
+            <div class="spinner"></div>
+            <p>Chargement de LA MAMMA...</p>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <script src="config/app.config.js"></script>
+    <script src="config/db.config.js"></script>
+    <script src="config/routes.config.js"></script>
+    <script src="config/defaults.config.js"></script>
+    
+    <!-- Point d'entrée de l'application -->
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>

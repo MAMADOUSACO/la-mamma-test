@@ -1,0 +1,22 @@
+{
+    "name": "LA MAMMA - Gestion Restaurant",
+    "short_name": "LA MAMMA",
+    "description": "Application de gestion complète pour le restaurant LA MAMMA",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#E74C3C",
+    "orientation": "any",
+    "icons": [
+      {
+        "src": "assets/images/logo/icon-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "assets/images/logo/icon-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }

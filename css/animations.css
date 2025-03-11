@@ -1,0 +1,286 @@
+/**
+ * Animations et transitions pour l'application LA MAMMA
+ * Optimisées pour la performance sur tablette
+ */
+
+/* Variables d'animation */
+:root {
+    --anim-duration-fast: 150ms;
+    --anim-duration-normal: 300ms;
+    --anim-duration-slow: 500ms;
+    --anim-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --anim-timing-function-enter: cubic-bezier(0.0, 0.0, 0.2, 1);
+    --anim-timing-function-exit: cubic-bezier(0.4, 0.0, 1, 1);
+  }
+  
+  /* Transitions de base */
+  .transition {
+    transition-duration: var(--anim-duration-normal);
+    transition-timing-function: var(--anim-timing-function);
+    transition-property: opacity, transform, background-color, color, border-color;
+  }
+  
+  .transition-fast {
+    transition-duration: var(--anim-duration-fast);
+  }
+  
+  .transition-slow {
+    transition-duration: var(--anim-duration-slow);
+  }
+  
+  /* Animation de fondu */
+  .fade-enter {
+    opacity: 0;
+  }
+  
+  .fade-enter-active {
+    opacity: 1;
+    transition: opacity var(--anim-duration-normal) var(--anim-timing-function-enter);
+  }
+  
+  .fade-exit {
+    opacity: 1;
+  }
+  
+  .fade-exit-active {
+    opacity: 0;
+    transition: opacity var(--anim-duration-normal) var(--anim-timing-function-exit);
+  }
+  
+  /* Animation de glissement vers le haut (modal) */
+  .slide-up-enter {
+    transform: translateY(100%);
+  }
+  
+  .slide-up-enter-active {
+    transform: translateY(0);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-enter);
+  }
+  
+  .slide-up-exit {
+    transform: translateY(0);
+  }
+  
+  .slide-up-exit-active {
+    transform: translateY(100%);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-exit);
+  }
+  
+  /* Animation de glissement depuis la droite */
+  .slide-right-enter {
+    transform: translateX(100%);
+  }
+  
+  .slide-right-enter-active {
+    transform: translateX(0);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-enter);
+  }
+  
+  .slide-right-exit {
+    transform: translateX(0);
+  }
+  
+  .slide-right-exit-active {
+    transform: translateX(100%);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-exit);
+  }
+  
+  /* Animation de glissement depuis la gauche */
+  .slide-left-enter {
+    transform: translateX(-100%);
+  }
+  
+  .slide-left-enter-active {
+    transform: translateX(0);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-enter);
+  }
+  
+  .slide-left-exit {
+    transform: translateX(0);
+  }
+  
+  .slide-left-exit-active {
+    transform: translateX(-100%);
+    transition: transform var(--anim-duration-normal) var(--anim-timing-function-exit);
+  }
+  
+  /* Animation d'expansion (accordéon) */
+  .expand-enter {
+    max-height: 0;
+    overflow: hidden;
+  }
+  
+  .expand-enter-active {
+    max-height: 500px; /* Valeur arbitraire suffisamment grande */
+    transition: max-height var(--anim-duration-normal) var(--anim-timing-function-enter);
+    overflow: hidden;
+  }
+  
+  .expand-exit {
+    max-height: 500px;
+    overflow: hidden;
+  }
+  
+  .expand-exit-active {
+    max-height: 0;
+    transition: max-height var(--anim-duration-normal) var(--anim-timing-function-exit);
+    overflow: hidden;
+  }
+  
+  /* Animation de pulse (attention) */
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  .pulse {
+    animation: pulse 1s var(--anim-timing-function) infinite;
+  }
+  
+  /* Animation de rotation */
+  @keyframes rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .rotate {
+    animation: rotate 2s linear infinite;
+  }
+  
+  /* Animation de secousse (erreur) */
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+      transform: translateX(-5px);
+    }
+    20%, 40%, 60%, 80% {
+      transform: translateX(5px);
+    }
+  }
+  
+  .shake {
+    animation: shake 0.5s var(--anim-timing-function);
+  }
+  
+  /* Animation de rebond */
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-20px);
+    }
+    60% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .bounce {
+    animation: bounce 1s var(--anim-timing-function);
+  }
+  
+  /* Animation d'apparition */
+  @keyframes pop-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    70% {
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .pop-in {
+    animation: pop-in var(--anim-duration-normal) var(--anim-timing-function-enter);
+  }
+  
+  /* Animation de notification toast */
+  @keyframes toast-in-out {
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    10%, 90% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+  
+  .toast {
+    animation: toast-in-out 3s var(--anim-timing-function);
+  }
+  
+  /* Animation de disparition progressive */
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  
+  .fade-out {
+    animation: fade-out var(--anim-duration-normal) var(--anim-timing-function-exit) forwards;
+  }
+  
+  /* Effets de survol et d'état */
+  .hover-scale {
+    transition: transform var(--anim-duration-fast) var(--anim-timing-function);
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.05);
+  }
+  
+  .hover-shadow {
+    transition: box-shadow var(--anim-duration-fast) var(--anim-timing-function);
+  }
+  
+  .hover-shadow:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Animation pour l'état de chargement (skeleton) */
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+  
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: var(--border-radius-sm);
+  }
+  
+  /* Option pour désactiver les animations */
+  .no-animations * {
+    animation: none !important;
+    transition: none !important;
+  }
