@@ -14,19 +14,19 @@ class Spinner {
      * Constructeur
      * @param {Object} options - Options du spinner
      * @param {string} options.size - Taille du spinner (small, medium, large)
-     * @param {string} options.text - Texte à afficher
+     * @param {string} options.text - Texte à afficher sous le spinner
      * @param {string} options.color - Couleur du spinner
-     * @param {boolean} options.overlay - Affiche un overlay sur le conteneur
-     * @param {boolean} options.centered - Centre le spinner dans son conteneur
+     * @param {boolean} options.inline - Affichage en ligne
+     * @param {boolean} options.overlay - Afficher avec un overlay
      * @param {string} options.className - Classes CSS additionnelles
      * @param {string} options.id - ID du composant
      */
     constructor(options = {}) {
       this.size = options.size || 'medium';
       this.text = options.text || '';
-      this.color = options.color || null;
+      this.color = options.color || '';
+      this.inline = options.inline || false;
       this.overlay = options.overlay || false;
-      this.centered = options.centered !== false;
       this.className = options.className || '';
       this.id = options.id || 'spinner-' + Date.now();
       
@@ -34,172 +34,170 @@ class Spinner {
     }
   
     /**
-     * Rend le composant spinner
-     * @returns {HTMLElement} - Élément spinner
+     * Rend le spinner
+     * @returns {HTMLElement} - Élément du spinner
      */
     render() {
-      // Créer le conteneur
-      this.element = document.createElement('div');
-      this.element.className = `spinner-container spinner-${this.size}`;
-      this.element.id = this.id;
-      
+      // Déterminer le conteneur principal
       if (this.overlay) {
-        this.element.classList.add('spinner-overlay');
-      }
-      
-      if (this.centered) {
-        this.element.classList.add('spinner-centered');
-      }
-      
-      if (this.className) {
-        this.className.split(' ').forEach(cls => {
-          if (cls) {
-            this.element.classList.add(cls);
-          }
-        });
-      }
-      
-      // Créer l'élément spinner
-      const spinnerElement = document.createElement('div');
-      spinnerElement.className = 'spinner';
-      
-      // Appliquer la couleur si spécifiée
-      if (this.color) {
-        spinnerElement.style.borderTopColor = this.color;
-      }
-      
-      this.element.appendChild(spinnerElement);
-      
-      // Ajouter le texte si spécifié
-      if (this.text) {
-        const textElement = document.createElement('div');
-        textElement.className = 'spinner-text';
-        textElement.textContent = this.text;
+        this.element = document.createElement('div');
+        this.element.className = 'spinner-overlay';
         
-        // Appliquer la couleur au texte si spécifiée
-        if (this.color) {
-          textElement.style.color = this.color;
+        if (this.className) {
+          this.className.split(' ').forEach(cls => {
+            if (cls) {
+              this.element.classList.add(cls);
+            }
+          });
         }
         
-        this.element.appendChild(textElement);
+        this.element.id = this.id;
+        
+        const spinnerContainer = document.createElement('div');
+        spinnerContainer.className = 'spinner-container';
+        
+        const spinner = this._createSpinnerElement();
+        spinnerContainer.appendChild(spinner);
+        
+        // Ajouter le texte si nécessaire
+        if (this.text) {
+          const textElement = document.createElement('div');
+          textElement.className = 'spinner-text';
+          textElement.textContent = this.text;
+          spinnerContainer.appendChild(textElement);
+        }
+        
+        this.element.appendChild(spinnerContainer);
+      } else {
+        // Spinner simple (sans overlay)
+        this.element = document.createElement('div');
+        
+        if (this.inline) {
+          this.element.className = `spinner-inline spinner-${this.size}`;
+        } else {
+          this.element.className = `spinner-container spinner-${this.size}`;
+        }
+        
+        if (this.className) {
+          this.className.split(' ').forEach(cls => {
+            if (cls) {
+              this.element.classList.add(cls);
+            }
+          });
+        }
+        
+        this.element.id = this.id;
+        
+        const spinner = this._createSpinnerElement();
+        this.element.appendChild(spinner);
+        
+        // Ajouter le texte si nécessaire et si non inline
+        if (this.text && !this.inline) {
+          const textElement = document.createElement('div');
+          textElement.className = 'spinner-text';
+          textElement.textContent = this.text;
+          this.element.appendChild(textElement);
+        }
       }
       
       return this.element;
     }
   
     /**
-     * Ajoute ou remplace le spinner dans un conteneur
-     * @param {HTMLElement} container - Élément conteneur
-     * @returns {HTMLElement} - Élément spinner
+     * Crée l'élément du spinner
+     * @returns {HTMLElement} - Élément du spinner
+     * @private
      */
-    attachTo(container) {
-      if (!container || !(container instanceof HTMLElement)) {
-        console.error('Le conteneur doit être un élément HTML valide');
-        return null;
+    _createSpinnerElement() {
+      const spinner = document.createElement('div');
+      spinner.className = `spinner spinner-${this.size}`;
+      
+      if (this.color) {
+        spinner.style.borderTopColor = this.color;
       }
       
-      // Rendre le spinner s'il n'est pas déjà rendu
-      if (!this.element) {
-        this.render();
-      }
-      
-      // S'assurer que le conteneur a une position relative ou absolute
-      // pour permettre le positionnement correct du spinner centré ou en overlay
-      const containerPosition = window.getComputedStyle(container).position;
-      if (containerPosition !== 'relative' && containerPosition !== 'absolute' && containerPosition !== 'fixed') {
-        container.style.position = 'relative';
-      }
-      
-      // Ajouter le spinner au conteneur
-      container.appendChild(this.element);
-      
-      return this.element;
+      return spinner;
     }
   
     /**
-     * Modifie le texte du spinner
+     * Active ou désactive l'overlay (si applicable)
+     * @param {boolean} visible - État visible
+     */
+    setVisible(visible) {
+      if (!this.element) return;
+      
+      if (this.overlay) {
+        if (visible) {
+          this.element.style.display = 'flex';
+        } else {
+          this.element.style.display = 'none';
+        }
+      }
+    }
+  
+    /**
+     * Met à jour le texte du spinner
      * @param {string} text - Nouveau texte
      */
     setText(text) {
       this.text = text;
       
       if (this.element) {
-        let textElement = this.element.querySelector('.spinner-text');
-        
-        if (text) {
-          if (textElement) {
-            // Mettre à jour le texte existant
-            textElement.textContent = text;
-          } else {
-            // Créer un nouvel élément texte
-            textElement = document.createElement('div');
-            textElement.className = 'spinner-text';
-            textElement.textContent = text;
-            
-            // Appliquer la couleur au texte si spécifiée
-            if (this.color) {
-              textElement.style.color = this.color;
-            }
-            
-            this.element.appendChild(textElement);
-          }
-        } else if (textElement && textElement.parentNode) {
-          // Supprimer le texte s'il existe et que le nouveau texte est vide
-          textElement.parentNode.removeChild(textElement);
-        }
-      }
-    }
-  
-    /**
-     * Modifie la taille du spinner
-     * @param {string} size - Nouvelle taille (small, medium, large)
-     */
-    setSize(size) {
-      if (['small', 'medium', 'large'].includes(size)) {
-        this.size = size;
-        
-        if (this.element) {
-          // Mettre à jour la classe de taille
-          this.element.className = this.element.className.replace(/spinner-\w+/, `spinner-${size}`);
-        }
-      }
-    }
-  
-    /**
-     * Modifie la couleur du spinner
-     * @param {string} color - Nouvelle couleur
-     */
-    setColor(color) {
-      this.color = color;
-      
-      if (this.element) {
-        const spinnerElement = this.element.querySelector('.spinner');
-        if (spinnerElement) {
-          spinnerElement.style.borderTopColor = color;
-        }
-        
         const textElement = this.element.querySelector('.spinner-text');
+        
         if (textElement) {
-          textElement.style.color = color;
+          textElement.textContent = text;
+        } else if (text && !this.inline) {
+          // Créer l'élément de texte s'il n'existe pas
+          const newTextElement = document.createElement('div');
+          newTextElement.className = 'spinner-text';
+          newTextElement.textContent = text;
+          this.element.appendChild(newTextElement);
         }
       }
     }
   
     /**
-     * Affiche le spinner s'il était caché
+     * Crée un spinner plein écran et l'affiche
+     * @param {string} text - Texte à afficher
+     * @returns {Spinner} - Instance du spinner
+     * @static
      */
-    show() {
-      if (this.element) {
-        this.element.style.display = '';
+    static showGlobal(text = 'Chargement...') {
+      const spinner = new Spinner({
+        size: 'large',
+        text,
+        overlay: true,
+        id: 'global-spinner'
+      });
+      
+      // Supprimer un spinner global existant
+      const existingSpinner = document.getElementById('global-spinner');
+      if (existingSpinner) {
+        existingSpinner.parentNode.removeChild(existingSpinner);
       }
+      
+      document.body.appendChild(spinner.render());
+      return spinner;
     }
   
     /**
-     * Cache le spinner
+     * Masque le spinner global
+     * @static
      */
-    hide() {
-      if (this.element) {
-        this.element.style.display = 'none';
+    static hideGlobal() {
+      const spinner = document.getElementById('global-spinner');
+      
+      if (spinner) {
+        // Ajouter une classe de sortie pour l'animation
+        spinner.classList.add('fade-out');
+        
+        // Supprimer après l'animation
+        setTimeout(() => {
+          if (spinner.parentNode) {
+            spinner.parentNode.removeChild(spinner);
+          }
+        }, 300);
       }
     }
   

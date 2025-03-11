@@ -3,12 +3,12 @@
  * 
  * Utilisation:
  * const dropdown = new Dropdown({
- *   label: 'Sélectionnez une option',
+ *   trigger: 'Sélectionner une option',
  *   items: [
- *     { id: 'option1', label: 'Option 1' },
- *     { id: 'option2', label: 'Option 2' }
+ *     { id: 'option1', text: 'Option 1' },
+ *     { id: 'option2', text: 'Option 2' }
  *   ],
- *   onChange: (selectedId) => console.log(`Option sélectionnée: ${selectedId}`)
+ *   onSelect: (item) => console.log('Option sélectionnée:', item)
  * });
  * container.appendChild(dropdown.render());
  */
@@ -17,41 +17,42 @@ class Dropdown {
     /**
      * Constructeur
      * @param {Object} options - Options du menu déroulant
-     * @param {string} options.label - Libellé du menu
-     * @param {Array} options.items - Éléments du menu
-     * @param {string} options.value - Valeur sélectionnée par défaut
-     * @param {Function} options.onChange - Fonction de rappel lors du changement
-     * @param {string} options.placeholder - Texte d'indication
-     * @param {boolean} options.disabled - Si le menu est désactivé
+     * @param {string|HTMLElement} options.trigger - Élément déclencheur
+     * @param {Array} options.items - Liste des éléments du menu
+     * @param {Function} options.onSelect - Fonction appelée à la sélection
+     * @param {string} options.selectedId - ID de l'élément sélectionné
+     * @param {string} options.position - Position du menu (bottom, top, left, right)
+     * @param {boolean} options.closeOnSelect - Fermer après sélection
      * @param {string} options.className - Classes CSS additionnelles
      * @param {string} options.id - ID du composant
+     * @param {boolean} options.disabled - Si le dropdown est désactivé
      */
     constructor(options = {}) {
-      this.label = options.label || '';
+      this.trigger = options.trigger || 'Sélectionner';
       this.items = options.items || [];
-      this.value = options.value || null;
-      this.onChange = options.onChange || null;
-      this.placeholder = options.placeholder || 'Sélectionner...';
-      this.disabled = options.disabled || false;
+      this.onSelect = options.onSelect || null;
+      this.selectedId = options.selectedId || null;
+      this.position = options.position || 'bottom';
+      this.closeOnSelect = options.closeOnSelect !== false;
       this.className = options.className || '';
       this.id = options.id || 'dropdown-' + Date.now();
+      this.disabled = options.disabled || false;
       
       this.element = null;
-      this.dropdownButton = null;
-      this.dropdownMenu = null;
+      this.triggerElement = null;
+      this.menuElement = null;
       this.isOpen = false;
-      
-      this.clickOutsideHandler = this._handleClickOutside.bind(this);
+      this.documentClickHandler = this._handleDocumentClick.bind(this);
     }
   
     /**
-     * Rend le composant de menu déroulant
+     * Rend le menu déroulant
      * @returns {HTMLElement} - Élément du menu déroulant
      */
     render() {
-      // Créer le conteneur principal
+      // Créer l'élément principal
       this.element = document.createElement('div');
-      this.element.className = 'dropdown-container';
+      this.element.className = 'dropdown';
       this.element.id = this.id;
       
       if (this.className) {
@@ -62,72 +63,65 @@ class Dropdown {
         });
       }
       
-      // Ajouter le label si spécifié
-      if (this.label) {
-        const labelElement = document.createElement('label');
-        labelElement.className = 'dropdown-label';
-        labelElement.textContent = this.label;
-        this.element.appendChild(labelElement);
-      }
-      
-      // Créer le bouton de menu déroulant
-      this.dropdownButton = document.createElement('button');
-      this.dropdownButton.className = 'dropdown-button';
-      this.dropdownButton.type = 'button';
-      this.dropdownButton.setAttribute('aria-haspopup', 'true');
-      this.dropdownButton.setAttribute('aria-expanded', 'false');
-      
-      // État désactivé
       if (this.disabled) {
-        this.dropdownButton.disabled = true;
         this.element.classList.add('disabled');
       }
       
-      // Ajouter le texte du bouton
-      const buttonTextSpan = document.createElement('span');
-      buttonTextSpan.className = 'dropdown-button-text';
+      // Créer l'élément déclencheur
+      this.triggerElement = document.createElement('button');
+      this.triggerElement.className = 'dropdown-trigger';
+      this.triggerElement.setAttribute('aria-haspopup', 'true');
+      this.triggerElement.setAttribute('aria-expanded', 'false');
       
-      // Définir le texte initial du bouton
-      this._updateButtonText(buttonTextSpan);
+      if (this.disabled) {
+        this.triggerElement.disabled = true;
+      }
       
-      // Ajouter l'icône de flèche
-      const arrowIcon = document.createElement('span');
-      arrowIcon.className = 'dropdown-arrow';
-      arrowIcon.innerHTML = `
-        <svg viewBox="0 0 24 24" width="16" height="16">
-          <path fill="currentColor" d="M7 10l5 5 5-5z"/>
-        </svg>
-      `;
+      // Ajouter le contenu du déclencheur
+      if (typeof this.trigger === 'string') {
+        this.triggerElement.innerHTML = `
+          <span class="dropdown-trigger-text">${this.trigger}</span>
+          <span class="dropdown-arrow">&#9662;</span>
+        `;
+      } else if (this.trigger instanceof HTMLElement) {
+        this.triggerElement.appendChild(this.trigger);
+        
+        // Ajouter une flèche si aucune n'est présente
+        if (!this.trigger.querySelector('.dropdown-arrow')) {
+          const arrow = document.createElement('span');
+          arrow.className = 'dropdown-arrow';
+          arrow.innerHTML = '&#9662;';
+          this.triggerElement.appendChild(arrow);
+        }
+      }
       
-      // Assembler le bouton
-      this.dropdownButton.appendChild(buttonTextSpan);
-      this.dropdownButton.appendChild(arrowIcon);
-      
-      // Créer le menu déroulant
-      this.dropdownMenu = document.createElement('div');
-      this.dropdownMenu.className = 'dropdown-menu';
-      this.dropdownMenu.setAttribute('role', 'menu');
+      // Créer le menu
+      this.menuElement = document.createElement('div');
+      this.menuElement.className = `dropdown-menu dropdown-position-${this.position}`;
+      this.menuElement.setAttribute('role', 'menu');
       
       // Ajouter les éléments du menu
       this.items.forEach(item => {
         const menuItem = document.createElement('div');
         menuItem.className = 'dropdown-item';
         menuItem.setAttribute('role', 'menuitem');
-        menuItem.setAttribute('data-value', item.id);
-        menuItem.textContent = item.label;
+        menuItem.setAttribute('data-id', item.id);
         
-        // Marquer l'élément comme sélectionné si nécessaire
-        if (item.id === this.value) {
+        if (item.id === this.selectedId) {
           menuItem.classList.add('selected');
         }
         
-        // Ajouter l'icône si nécessaire
+        if (item.disabled) {
+          menuItem.classList.add('disabled');
+        }
+        
+        // Si l'élément a une icône
         if (item.icon) {
           const iconElement = document.createElement('span');
           iconElement.className = 'dropdown-item-icon';
           
           // Utiliser le composant Button pour récupérer l'icône
-          if (window.components && window.components.Button) {
+          if (window.components.Button) {
             const tempButton = new window.components.Button({ icon: item.icon, isIconOnly: true });
             const tempElement = tempButton.render();
             const iconWrapper = tempElement.querySelector('.btn-icon-wrapper');
@@ -140,181 +134,71 @@ class Dropdown {
             iconElement.classList.add('icon', `icon-${item.icon}`);
           }
           
-          menuItem.insertBefore(iconElement, menuItem.firstChild);
+          menuItem.appendChild(iconElement);
         }
         
-        // Gérer le clic sur un élément du menu
-        menuItem.addEventListener('click', () => {
-          if (!this.disabled) {
-            this._selectItem(item.id);
-            this.close();
-          }
-        });
+        // Ajouter le texte
+        const textElement = document.createElement('span');
+        textElement.className = 'dropdown-item-text';
+        textElement.textContent = item.text || item.id;
+        menuItem.appendChild(textElement);
         
-        this.dropdownMenu.appendChild(menuItem);
+        // Ajouter un indicateur de sélection si nécessaire
+        if (item.id === this.selectedId) {
+          const checkmark = document.createElement('span');
+          checkmark.className = 'dropdown-item-selected';
+          checkmark.textContent = '✓';
+          menuItem.appendChild(checkmark);
+        }
+        
+        // Ajouter l'événement de clic
+        if (!item.disabled) {
+          menuItem.addEventListener('click', (event) => {
+            this._onItemClick(item, event);
+          });
+        }
+        
+        this.menuElement.appendChild(menuItem);
+      });
+      
+      // Si le menu est vide, ajouter un message
+      if (this.items.length === 0) {
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'dropdown-item dropdown-item-empty';
+        emptyItem.textContent = 'Aucun élément';
+        this.menuElement.appendChild(emptyItem);
+      }
+      
+      // Ajouter l'événement de clic sur le déclencheur
+      this.triggerElement.addEventListener('click', (event) => {
+        if (!this.disabled) {
+          this.toggle();
+          event.stopPropagation();
+        }
       });
       
       // Assembler le composant
-      this.element.appendChild(this.dropdownButton);
-      this.element.appendChild(this.dropdownMenu);
-      
-      // Attacher les gestionnaires d'événements
-      this._attachEventListeners();
+      this.element.appendChild(this.triggerElement);
+      this.element.appendChild(this.menuElement);
       
       return this.element;
-    }
-  
-    /**
-     * Met à jour le texte du bouton
-     * @param {HTMLElement} buttonTextElement - Élément de texte du bouton
-     * @private
-     */
-    _updateButtonText(buttonTextElement) {
-      // Si un élément est sélectionné, afficher son libellé
-      if (this.value !== null) {
-        const selectedItem = this.items.find(item => item.id === this.value);
-        if (selectedItem) {
-          buttonTextElement.textContent = selectedItem.label;
-          return;
-        }
-      }
-      
-      // Sinon, afficher le placeholder
-      buttonTextElement.textContent = this.placeholder;
-      buttonTextElement.classList.add('placeholder');
-    }
-  
-    /**
-     * Attache les gestionnaires d'événements
-     * @private
-     */
-    _attachEventListeners() {
-      // Ouvrir/fermer le menu au clic sur le bouton
-      this.dropdownButton.addEventListener('click', () => {
-        if (!this.disabled) {
-          this.isOpen ? this.close() : this.open();
-        }
-      });
-      
-      // Gestion du clavier pour l'accessibilité
-      this.dropdownButton.addEventListener('keydown', (event) => {
-        if (!this.disabled) {
-          if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
-            event.preventDefault();
-            this.open();
-          }
-        }
-      });
-      
-      this.element.addEventListener('keydown', (event) => {
-        if (!this.disabled && this.isOpen) {
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            this.close();
-          } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-            event.preventDefault();
-            this._navigateWithKeyboard(event.key === 'ArrowDown' ? 1 : -1);
-          } else if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            const focusedItem = this.dropdownMenu.querySelector('.dropdown-item:focus');
-            if (focusedItem) {
-              const value = focusedItem.getAttribute('data-value');
-              this._selectItem(value);
-              this.close();
-            }
-          }
-        }
-      });
-    }
-  
-    /**
-     * Gère le clic en dehors du menu déroulant
-     * @param {Event} event - Événement de clic
-     * @private
-     */
-    _handleClickOutside(event) {
-      if (this.element && !this.element.contains(event.target)) {
-        this.close();
-      }
-    }
-  
-    /**
-     * Navigation avec le clavier
-     * @param {number} direction - Direction (1 pour bas, -1 pour haut)
-     * @private
-     */
-    _navigateWithKeyboard(direction) {
-      const items = Array.from(this.dropdownMenu.querySelectorAll('.dropdown-item'));
-      if (items.length === 0) return;
-      
-      // Trouver l'élément actuellement focus
-      const focusedItem = this.dropdownMenu.querySelector('.dropdown-item:focus');
-      let index = focusedItem ? items.indexOf(focusedItem) : -1;
-      
-      // Calculer le nouvel index
-      index += direction;
-      
-      // Assurer que l'index est dans les limites
-      if (index < 0) index = items.length - 1;
-      if (index >= items.length) index = 0;
-      
-      // Focus sur le nouvel élément
-      items[index].focus();
-    }
-  
-    /**
-     * Sélectionne un élément du menu
-     * @param {string} itemId - ID de l'élément à sélectionner
-     * @private
-     */
-    _selectItem(itemId) {
-      // Mettre à jour la valeur sélectionnée
-      this.value = itemId;
-      
-      // Mettre à jour l'affichage du bouton
-      const buttonTextElement = this.dropdownButton.querySelector('.dropdown-button-text');
-      if (buttonTextElement) {
-        this._updateButtonText(buttonTextElement);
-      }
-      
-      // Mettre à jour la classe selected des éléments du menu
-      const items = this.dropdownMenu.querySelectorAll('.dropdown-item');
-      items.forEach(item => {
-        const itemValue = item.getAttribute('data-value');
-        if (itemValue === itemId) {
-          item.classList.add('selected');
-        } else {
-          item.classList.remove('selected');
-        }
-      });
-      
-      // Appeler le callback onChange
-      if (this.onChange && typeof this.onChange === 'function') {
-        this.onChange(itemId);
-      }
     }
   
     /**
      * Ouvre le menu déroulant
      */
     open() {
-      if (this.disabled || this.isOpen) return;
+      if (this.isOpen || this.disabled) return;
       
       // Ajouter la classe active
       this.element.classList.add('active');
-      this.dropdownButton.setAttribute('aria-expanded', 'true');
+      this.menuElement.classList.add('active');
+      this.triggerElement.setAttribute('aria-expanded', 'true');
+      
+      // Ajouter l'écouteur de clic sur le document
+      document.addEventListener('click', this.documentClickHandler);
+      
       this.isOpen = true;
-      
-      // Ajouter l'écouteur de clic extérieur
-      document.addEventListener('click', this.clickOutsideHandler);
-      
-      // Donner le focus au premier élément pour l'accessibilité
-      setTimeout(() => {
-        const firstItem = this.dropdownMenu.querySelector('.dropdown-item');
-        if (firstItem) {
-          firstItem.focus();
-        }
-      }, 10);
     }
   
     /**
@@ -325,62 +209,164 @@ class Dropdown {
       
       // Retirer la classe active
       this.element.classList.remove('active');
-      this.dropdownButton.setAttribute('aria-expanded', 'false');
-      this.isOpen = false;
+      this.menuElement.classList.remove('active');
+      this.triggerElement.setAttribute('aria-expanded', 'false');
       
-      // Retirer l'écouteur de clic extérieur
-      document.removeEventListener('click', this.clickOutsideHandler);
+      // Retirer l'écouteur de clic sur le document
+      document.removeEventListener('click', this.documentClickHandler);
+      
+      this.isOpen = false;
     }
   
     /**
-     * Définit la valeur sélectionnée
-     * @param {string} value - Valeur à sélectionner
+     * Bascule l'état du menu déroulant
      */
-    setValue(value) {
-      if (this.items.some(item => item.id === value)) {
-        this._selectItem(value);
+    toggle() {
+      if (this.isOpen) {
+        this.close();
+      } else {
+        this.open();
       }
     }
   
     /**
-     * Obtient la valeur sélectionnée
-     * @returns {string|null} - Valeur sélectionnée
+     * Gère le clic sur un élément du menu
+     * @param {Object} item - Élément cliqué
+     * @param {Event} event - Événement de clic
+     * @private
      */
-    getValue() {
-      return this.value;
+    _onItemClick(item, event) {
+      // Appeler le callback onSelect
+      if (this.onSelect && typeof this.onSelect === 'function') {
+        this.onSelect(item);
+      }
+      
+      // Mettre à jour l'élément sélectionné
+      this.selectedId = item.id;
+      
+      // Mettre à jour l'interface
+      this._updateSelection();
+      
+      // Fermer le menu si nécessaire
+      if (this.closeOnSelect) {
+        this.close();
+      }
+      
+      // Empêcher la propagation pour éviter la fermeture immédiate
+      event.stopPropagation();
+    }
+  
+    /**
+     * Met à jour l'affichage de la sélection
+     * @private
+     */
+    _updateSelection() {
+      // Mettre à jour les classes des éléments du menu
+      if (this.menuElement) {
+        const items = this.menuElement.querySelectorAll('.dropdown-item');
+        
+        items.forEach(item => {
+          const itemId = item.getAttribute('data-id');
+          
+          if (itemId === this.selectedId) {
+            item.classList.add('selected');
+            
+            // Ajouter un indicateur de sélection s'il n'existe pas
+            if (!item.querySelector('.dropdown-item-selected')) {
+              const checkmark = document.createElement('span');
+              checkmark.className = 'dropdown-item-selected';
+              checkmark.textContent = '✓';
+              item.appendChild(checkmark);
+            }
+          } else {
+            item.classList.remove('selected');
+            
+            // Supprimer l'indicateur de sélection s'il existe
+            const checkmark = item.querySelector('.dropdown-item-selected');
+            if (checkmark) {
+              checkmark.remove();
+            }
+          }
+        });
+      }
+      
+      // Mettre à jour le texte du déclencheur si c'est une chaîne
+      if (typeof this.trigger === 'string' && this.triggerElement) {
+        const selectedItem = this.items.find(item => item.id === this.selectedId);
+        
+        if (selectedItem) {
+          const triggerText = this.triggerElement.querySelector('.dropdown-trigger-text');
+          
+          if (triggerText) {
+            triggerText.textContent = selectedItem.text || selectedItem.id;
+          }
+        }
+      }
+    }
+  
+    /**
+     * Gère le clic sur le document
+     * @param {Event} event - Événement de clic
+     * @private
+     */
+    _handleDocumentClick(event) {
+      // Fermer le menu si le clic est à l'extérieur
+      if (this.element && !this.element.contains(event.target)) {
+        this.close();
+      }
+    }
+  
+    /**
+     * Sélectionne un élément par son ID
+     * @param {string} id - ID de l'élément à sélectionner
+     */
+    select(id) {
+      const item = this.items.find(item => item.id === id);
+      
+      if (item && !item.disabled) {
+        this.selectedId = id;
+        this._updateSelection();
+        
+        // Appeler le callback onSelect
+        if (this.onSelect && typeof this.onSelect === 'function') {
+          this.onSelect(item);
+        }
+      }
     }
   
     /**
      * Met à jour les éléments du menu
      * @param {Array} items - Nouveaux éléments
      */
-    setItems(items) {
+    updateItems(items) {
       this.items = items || [];
       
-      if (this.dropdownMenu) {
+      if (this.menuElement) {
         // Vider le menu
-        this.dropdownMenu.innerHTML = '';
+        this.menuElement.innerHTML = '';
         
         // Ajouter les nouveaux éléments
         this.items.forEach(item => {
           const menuItem = document.createElement('div');
           menuItem.className = 'dropdown-item';
           menuItem.setAttribute('role', 'menuitem');
-          menuItem.setAttribute('data-value', item.id);
-          menuItem.textContent = item.label;
+          menuItem.setAttribute('data-id', item.id);
           
-          // Marquer l'élément comme sélectionné si nécessaire
-          if (item.id === this.value) {
+          if (item.id === this.selectedId) {
             menuItem.classList.add('selected');
           }
           
-          // Ajouter l'icône si nécessaire
+          if (item.disabled) {
+            menuItem.classList.add('disabled');
+          }
+          
+          // Si l'élément a une icône
           if (item.icon) {
             const iconElement = document.createElement('span');
             iconElement.className = 'dropdown-item-icon';
             
             // Utiliser le composant Button pour récupérer l'icône
-            if (window.components && window.components.Button) {
+            if (window.components.Button) {
               const tempButton = new window.components.Button({ icon: item.icon, isIconOnly: true });
               const tempElement = tempButton.render();
               const iconWrapper = tempElement.querySelector('.btn-icon-wrapper');
@@ -393,24 +379,39 @@ class Dropdown {
               iconElement.classList.add('icon', `icon-${item.icon}`);
             }
             
-            menuItem.insertBefore(iconElement, menuItem.firstChild);
+            menuItem.appendChild(iconElement);
           }
           
-          // Gérer le clic sur un élément du menu
-          menuItem.addEventListener('click', () => {
-            if (!this.disabled) {
-              this._selectItem(item.id);
-              this.close();
-            }
-          });
+          // Ajouter le texte
+          const textElement = document.createElement('span');
+          textElement.className = 'dropdown-item-text';
+          textElement.textContent = item.text || item.id;
+          menuItem.appendChild(textElement);
           
-          this.dropdownMenu.appendChild(menuItem);
+          // Ajouter un indicateur de sélection si nécessaire
+          if (item.id === this.selectedId) {
+            const checkmark = document.createElement('span');
+            checkmark.className = 'dropdown-item-selected';
+            checkmark.textContent = '✓';
+            menuItem.appendChild(checkmark);
+          }
+          
+          // Ajouter l'événement de clic
+          if (!item.disabled) {
+            menuItem.addEventListener('click', (event) => {
+              this._onItemClick(item, event);
+            });
+          }
+          
+          this.menuElement.appendChild(menuItem);
         });
         
-        // Mettre à jour l'affichage du bouton
-        const buttonTextElement = this.dropdownButton.querySelector('.dropdown-button-text');
-        if (buttonTextElement) {
-          this._updateButtonText(buttonTextElement);
+        // Si le menu est vide, ajouter un message
+        if (this.items.length === 0) {
+          const emptyItem = document.createElement('div');
+          emptyItem.className = 'dropdown-item dropdown-item-empty';
+          emptyItem.textContent = 'Aucun élément';
+          this.menuElement.appendChild(emptyItem);
         }
       }
     }
@@ -425,11 +426,19 @@ class Dropdown {
       if (this.element) {
         if (disabled) {
           this.element.classList.add('disabled');
-          this.dropdownButton.disabled = true;
-          this.close();
+          if (this.triggerElement) {
+            this.triggerElement.disabled = true;
+          }
+          
+          // Fermer le menu s'il est ouvert
+          if (this.isOpen) {
+            this.close();
+          }
         } else {
           this.element.classList.remove('disabled');
-          this.dropdownButton.disabled = false;
+          if (this.triggerElement) {
+            this.triggerElement.disabled = false;
+          }
         }
       }
     }
@@ -442,18 +451,18 @@ class Dropdown {
         this.close();
       }
       
-      document.removeEventListener('click', this.clickOutsideHandler);
+      document.removeEventListener('click', this.documentClickHandler);
       
       if (this.element) {
-        // Supprimer tous les écouteurs d'événements en remplaçant les éléments
-        const newElement = this.element.cloneNode(true);
+        // Supprimer les écouteurs d'événements
+        const clone = this.element.cloneNode(true);
         if (this.element.parentNode) {
-          this.element.parentNode.replaceChild(newElement, this.element);
+          this.element.parentNode.replaceChild(clone, this.element);
         }
         
         this.element = null;
-        this.dropdownButton = null;
-        this.dropdownMenu = null;
+        this.triggerElement = null;
+        this.menuElement = null;
       }
     }
   }
