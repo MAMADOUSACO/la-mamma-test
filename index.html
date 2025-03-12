@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/login.css">
     <!-- Modules CSS spécifiques seront chargés dynamiquement selon la page -->
+    
+    <!-- Outil de diagnostic - À RETIRER APRÈS DÉBOGAGE -->
+    <script src="js/diagnostic.js"></script>
 </head>
 <body>
     <div id="app">
@@ -80,5 +83,41 @@
     
     <!-- Point d'entrée de l'application -->
     <script src="js/app.js"></script>
+    
+    <!-- Script de débogage temporaire - À RETIRER APRÈS DÉBOGAGE -->
+    <script>
+        // Ce script s'exécute après que tout est chargé
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("📊 DEBUGGING: DOMContentLoaded triggered");
+            
+            // Forcer l'authentification (sécurité de dev uniquement)
+            if (window.services && window.services.auth) {
+                console.log("📊 Authentication state:", window.services.auth.isAuthenticated() ? "Authenticated" : "Not authenticated");
+            }
+            
+            // Vérifier si la vue Dashboard existe et peut être instanciée
+            setTimeout(function() {
+                console.log("📊 Attempting to manually render Dashboard");
+                try {
+                    if (window.views && window.views.Dashboard) {
+                        const dashboard = new window.views.Dashboard();
+                        const dashboardElement = dashboard.render();
+                        
+                        // Vider le conteneur de l'application et y ajouter le tableau de bord
+                        const appContainer = document.getElementById('app');
+                        if (appContainer) {
+                            console.log("📊 Clearing app container and adding Dashboard");
+                            appContainer.innerHTML = '';
+                            appContainer.appendChild(dashboardElement);
+                        }
+                    } else {
+                        console.error("📊 Dashboard view not found");
+                    }
+                } catch (e) {
+                    console.error("📊 Error rendering Dashboard manually:", e);
+                }
+            }, 2000);
+        });
+    </script>
 </body>
 </html>
