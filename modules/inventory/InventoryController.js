@@ -80,7 +80,7 @@ const InventoryController = {
     },
     
     /**
-     * Recherche des produits par texte
+     * Effectue une recherche de produits
      * @param {string} query - Texte de recherche
      * @param {Function} callback - Fonction appelée avec les résultats
      */
@@ -104,8 +104,8 @@ const InventoryController = {
       try {
         return await this.service.createProduct(productData);
       } catch (error) {
-        console.error('Erreur lors de la création d\'un produit:', error);
-        window.services.notification.error('Impossible de créer le produit: ' + error.message);
+        console.error('Erreur lors de la création du produit:', error);
+        window.services.notification.error(`Impossible de créer le produit: ${error.message}`);
         return null;
       }
     },
@@ -117,49 +117,18 @@ const InventoryController = {
      */
     async updateProduct(productData) {
       try {
-        return await this.service.updateProduct(productData);
+        const success = await this.service.updateProduct(productData);
+        
+        // Si le produit courant a été mis à jour, recharger ses données
+        if (success && this.currentProduct && this.currentProduct.id === productData.id) {
+          await this.loadProduct(productData.id, true, () => {});
+        }
+        
+        return success;
       } catch (error) {
         console.error('Erreur lors de la mise à jour du produit:', error);
-        window.services.notification.error('Impossible de mettre à jour le produit: ' + error.message);
+        window.services.notification.error(`Impossible de mettre à jour le produit: ${error.message}`);
         return false;
-      }
-    },
-    
-    /**
-     * Ajuste le stock d'un produit
-     * @param {number} productId - ID du produit
-     * @param {number} quantityChange - Quantité à ajouter (positif) ou soustraire (négatif)
-     * @param {string} reason - Raison de l'ajustement
-     * @param {string} note - Note supplémentaire
-     * @returns {Promise<boolean>} True si l'ajustement a réussi
-     */
-    async adjustStock(productId, quantityChange, reason, note) {
-      try {
-        return await this.service.adjustStock(productId, quantityChange, reason, note);
-      } catch (error) {
-        console.error('Erreur lors de l\'ajustement du stock:', error);
-        window.services.notification.error('Impossible d\'ajuster le stock: ' + error.message);
-        return false;
-      }
-    },
-    
-    /**
-     * Vérifie les alertes de stock et notifie si nécessaire
-     * @returns {Promise<Array>} Liste des produits avec alertes
-     */
-    async checkStockAlerts() {
-      try {
-        const alertProducts = await this.service.checkLowStock();
-        
-        // Créer des alertes pour chaque produit avec stock bas
-        alertProducts.forEach(product => {
-          this._createStockAlert(product);
-        });
-        
-        return alertProducts;
-      } catch (error) {
-        console.error('Erreur lors de la vérification des alertes de stock:', error);
-        return [];
       }
     },
     
@@ -171,28 +140,161 @@ const InventoryController = {
      */
     async setProductActive(productId, active) {
       try {
-        return await this.service.setProductActive(productId, active);
+        const success = await this.service.setProductActive(productId, active);
+        
+        // Si le produit courant a été modifié, recharger ses données
+        if (success && this.currentProduct && this.currentProduct.id === productId) {
+          await this.loadProduct(productId, true, () => {});
+        }
+        
+        return success;
       } catch (error) {
-        console.error('Erreur lors de la modification du statut du produit:', error);
-        window.services.notification.error('Impossible de modifier le statut du produit');
+        console.error(`Erreur lors de la ${active ? 'activation' : 'désactivation'} du produit:`, error);
+        window.services.notification.error(`Impossible de ${active ? 'activer' : 'désactiver'} le produit`);
         return false;
       }
     },
     
     /**
-     * Charge le journal d'inventaire
-     * @param {Object} filters - Filtres à appliquer
-     * @param {Function} callback - Fonction appelée avec le journal chargé
+     * Ajoute du stock à un produit
+     * @param {number} productId - ID du produit
+     * @param {number} quantity - Quantité à ajouter
+     * @param {string} reference - Référence (ex: numéro de facture)
+     * @param {string} note - Note utilisateur
+     * @returns {Promise<boolean>} True si l'ajout a réussi
      */
-    async loadInventoryLog(filters, callback) {
+    async addStock(productId, quantity, reference, note) {
       try {
-        const logEntries = await this.service.getInventoryLog(filters);
-        callback(logEntries);
+        const success = await this.service.addStock(productId, quantity, reference, note);
+        
+        // Si le produit courant a été modifié, recharger ses données
+        if (success && this.currentProduct && this.currentProduct.id === productId) {
+          await this.loadProduct(productId, true, () => {});
+        }
+        
+        return success;
       } catch (error) {
-        console.error('Erreur lors du chargement du journal d\'inventaire:', error);
-        window.services.notification.error('Impossible de charger le journal d\'inventaire');
+        console.error('Erreur lors de l\'ajout de stock:', error);
+        window.services.notification.error(`Impossible d'ajouter du stock: ${error.message}`);
+        return false;
+      }
+    },
+    
+    /**
+     * Retire du stock d'un produit
+     * @param {number} productId - ID du produit
+     * @param {number} quantity - Quantité à retirer
+     * @param {string} reason - Raison du retrait
+     * @param {string} note - Note utilisateur
+     * @returns {Promise<boolean>} True si le retrait a réussi
+     */
+    async removeStock(productId, quantity, reason, note) {
+      try {
+        const success = await this.service.removeStock(productId, quantity, reason, note);
+        
+        // Si le produit courant a été modifié, recharger ses données
+        if (success && this.currentProduct && this.currentProduct.id === productId) {
+          await this.loadProduct(productId, true, () => {});
+        }
+        
+        return success;
+      } catch (error) {
+        console.error('Erreur lors du retrait de stock:', error);
+        window.services.notification.error(`Impossible de retirer du stock: ${error.message}`);
+        return false;
+      }
+    },
+    
+    /**
+     * Ajuste le stock d'un produit (entrée ou sortie)
+     * @param {number} productId - ID du produit
+     * @param {number} quantity - Quantité à ajouter (positif) ou retirer (négatif)
+     * @param {string} reason - Raison de l'ajustement
+     * @param {string} note - Note utilisateur
+     * @returns {Promise<boolean>} True si l'ajustement a réussi
+     */
+    async adjustStock(productId, quantity, reason, note) {
+      if (quantity > 0) {
+        return await this.addStock(productId, quantity, reason, note);
+      } else if (quantity < 0) {
+        return await this.removeStock(productId, Math.abs(quantity), reason, note);
+      } else {
+        // Aucun changement si la quantité est 0
+        return true;
+      }
+    },
+    
+    /**
+     * Récupère le journal des mouvements d'inventaire
+     * @param {Object} filters - Filtres à appliquer
+     * @param {Function} callback - Fonction appelée avec le journal
+     */
+    async getInventoryLog(filters, callback) {
+      try {
+        const log = await this.service.getInventoryLog(filters);
+        callback(log);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du journal d\'inventaire:', error);
+        window.services.notification.error('Impossible de récupérer le journal d\'inventaire');
         callback([]);
       }
+    },
+    
+    /**
+     * Vérifie les alertes de stock bas
+     * @returns {Promise<Array>} Liste des produits avec stock bas
+     */
+    async checkStockAlerts() {
+      try {
+        const lowStockProducts = await this.service.checkLowStock();
+        
+        // Créer des alertes pour chaque produit à stock bas
+        lowStockProducts.forEach(product => {
+          // Déterminer la priorité selon la quantité
+          let priority = window.services.alerts.priorities.MEDIUM;
+          
+          if (product.quantity <= 0) {
+            priority = window.services.alerts.priorities.HIGH;
+          }
+          
+          // Créer l'alerte
+          const alert = {
+            type: window.services.alerts.types.INVENTORY,
+            priority: priority,
+            title: 'Stock bas',
+            message: `Le stock de "${product.name}" est bas (${product.quantity} ${product.unit} restant${product.quantity > 1 ? 's' : ''})`,
+            data: {
+              productId: product.id,
+              currentStock: product.quantity,
+              minStock: product.min_stock
+            }
+          };
+          
+          window.services.alerts.addAlert(alert);
+        });
+        
+        return lowStockProducts;
+      } catch (error) {
+        console.error('Erreur lors de la vérification des alertes de stock:', error);
+        return [];
+      }
+    },
+    
+    /**
+     * Définit le produit courant
+     * @param {Object} product - Produit à définir comme courant
+     */
+    setCurrentProduct(product) {
+      this.currentProduct = product;
+      this._notifyProductChanged();
+    },
+    
+    /**
+     * Réinitialise le produit courant
+     */
+    clearCurrentProduct() {
+      this.currentProduct = null;
+      this._notifyProductChanged();
     },
     
     /**
@@ -232,14 +334,6 @@ const InventoryController = {
       );
     },
     
-    /**
-     * Ferme le produit courant
-     */
-    closeCurrentProduct() {
-      this.currentProduct = null;
-      this._notifyProductChanged();
-    },
-    
     /* Méthodes privées */
     
     /**
@@ -257,45 +351,6 @@ const InventoryController = {
           console.error('Erreur dans un abonné aux changements de produit:', error);
         }
       });
-    },
-    
-    /**
-     * Crée une alerte pour un produit avec stock bas
-     * @param {Object} product - Produit avec stock bas
-     * @private
-     */
-    _createStockAlert(product) {
-      // Définir la priorité selon le niveau de stock
-      let priority;
-      
-      if (product.quantity <= 0) {
-        priority = window.services.alerts.priorities.CRITICAL;
-      } else {
-        priority = window.services.alerts.priorities.MEDIUM;
-      }
-      
-      // Créer le message d'alerte
-      let message;
-      if (product.quantity <= 0) {
-        message = `Le produit "${product.name}" est en rupture de stock !`;
-      } else {
-        message = `Le stock de "${product.name}" est bas (${product.quantity} ${product.unit} restant${product.quantity > 1 ? 's' : ''})`;
-      }
-      
-      // Créer l'alerte
-      const alert = {
-        type: window.services.alerts.types.INVENTORY,
-        priority: priority,
-        title: 'Stock bas',
-        message: message,
-        data: {
-          productId: product.id,
-          currentStock: product.quantity,
-          minStock: product.min_stock
-        }
-      };
-      
-      window.services.alerts.addAlert(alert);
     }
   };
   
