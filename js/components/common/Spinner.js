@@ -1,225 +1,127 @@
 /**
- * Composant Alert - Messages d'alerte et notifications
- * Fichier: js/components/common/Alert.js
+ * Composant Spinner - Indicateur de chargement
+ * Fichier: js/components/common/Spinner.js
  */
 
-class Alert {
+class Spinner {
   /**
-   * Constructeur du composant Alert
+   * Constructeur du composant Spinner
    * @param {Object} options - Options de configuration
-   * @param {string} options.type - Type d'alerte (info, success, warning, error)
-   * @param {string} options.title - Titre de l'alerte
-   * @param {string} options.message - Message de l'alerte
-   * @param {boolean} options.dismissible - Si true, l'alerte peut être fermée
-   * @param {number} options.duration - Durée d'affichage en ms (0 pour permanent)
-   * @param {string} options.icon - Classe CSS de l'icône
-   * @param {string} options.position - Position de l'alerte (top, bottom, etc.)
-   * @param {Function} options.onDismiss - Callback appelé lors de la fermeture
+   * @param {string} options.size - Taille du spinner (small, medium, large)
+   * @param {string} options.color - Couleur personnalisée du spinner
+   * @param {string} options.message - Message à afficher sous le spinner
+   * @param {boolean} options.overlay - Si true, affiche un fond semi-transparent
    * @param {string} options.className - Classes CSS additionnelles
-   * @param {boolean} options.showBorder - Si true, affiche une bordure colorée
    */
   constructor(options = {}) {
-    this.type = options.type || 'info';
-    this.title = options.title || '';
+    this.size = options.size || 'medium';
+    this.color = options.color || '';
     this.message = options.message || '';
-    this.dismissible = options.dismissible !== undefined ? options.dismissible : true;
-    this.duration = options.duration || 0; // 0 = pas de fermeture automatique
-    this.icon = options.icon || this._getDefaultIcon();
-    this.position = options.position || 'default';
-    this.onDismiss = options.onDismiss || (() => {});
+    this.overlay = options.overlay !== undefined ? options.overlay : false;
     this.className = options.className || '';
-    this.showBorder = options.showBorder !== undefined ? options.showBorder : true;
     
     this.element = null;
-    this.dismissButton = null;
-    this.timeoutId = null;
   }
 
   /**
-   * Génère et retourne l'élément HTML de l'alerte
-   * @param {HTMLElement} container - Conteneur où ajouter l'alerte (optionnel)
-   * @returns {HTMLElement} L'élément de l'alerte
+   * Génère et retourne l'élément HTML du spinner
+   * @returns {HTMLElement} L'élément du spinner
    */
-  render(container = null) {
+  render() {
     // Créer l'élément principal
     this.element = document.createElement('div');
     
     // Construire les classes CSS
     let cssClasses = [
-      'alert',
-      `alert-${this.type}`
+      'spinner-container',
+      `spinner-${this.size}`
     ];
     
-    if (this.dismissible) cssClasses.push('alert-dismissible');
-    if (this.position !== 'default') cssClasses.push(`alert-${this.position}`);
-    if (this.showBorder) cssClasses.push('alert-bordered');
+    if (this.overlay) cssClasses.push('spinner-overlay');
     if (this.className) cssClasses.push(this.className);
     
     this.element.className = cssClasses.join(' ');
-    this.element.role = 'alert';
     
-    // Créer la structure interne
-    const contentWrapper = document.createElement('div');
-    contentWrapper.className = 'alert-content';
+    // Créer le spinner
+    const spinnerElement = document.createElement('div');
+    spinnerElement.className = 'spinner';
     
-    // Ajouter l'icône si présente
-    if (this.icon) {
-      const iconElement = document.createElement('div');
-      iconElement.className = 'alert-icon';
-      
-      const iconSpan = document.createElement('span');
-      iconSpan.className = this.icon;
-      iconElement.appendChild(iconSpan);
-      
-      contentWrapper.appendChild(iconElement);
+    // Appliquer la couleur personnalisée si spécifiée
+    if (this.color) {
+      spinnerElement.style.borderTopColor = this.color;
     }
     
-    // Créer le conteneur de texte
-    const textElement = document.createElement('div');
-    textElement.className = 'alert-text';
+    this.element.appendChild(spinnerElement);
     
-    // Ajouter le titre si présent
-    if (this.title) {
-      const titleElement = document.createElement('div');
-      titleElement.className = 'alert-title';
-      titleElement.textContent = this.title;
-      textElement.appendChild(titleElement);
-    }
-    
-    // Ajouter le message
-    const messageElement = document.createElement('div');
-    messageElement.className = 'alert-message';
-    
-    // Supporter HTML ou texte simple
-    if (this.message.includes('<') && this.message.includes('>')) {
-      messageElement.innerHTML = this.message;
-    } else {
+    // Ajouter le message si présent
+    if (this.message) {
+      const messageElement = document.createElement('div');
+      messageElement.className = 'spinner-message';
       messageElement.textContent = this.message;
-    }
-    
-    textElement.appendChild(messageElement);
-    contentWrapper.appendChild(textElement);
-    
-    // Ajouter le bouton de fermeture si dismissible
-    if (this.dismissible) {
-      this.dismissButton = document.createElement('button');
-      this.dismissButton.type = 'button';
-      this.dismissButton.className = 'alert-close';
-      this.dismissButton.innerHTML = '&times;';
-      this.dismissButton.addEventListener('click', this._handleDismiss.bind(this));
-      
-      this.element.appendChild(this.dismissButton);
-    }
-    
-    this.element.appendChild(contentWrapper);
-    
-    // Ajouter l'alerte au conteneur spécifié
-    if (container) {
-      container.appendChild(this.element);
-    }
-    
-    // Configurer la fermeture automatique si nécessaire
-    if (this.duration > 0) {
-      this.timeoutId = setTimeout(() => {
-        this.dismiss();
-      }, this.duration);
+      this.element.appendChild(messageElement);
     }
     
     return this.element;
   }
   
   /**
-   * Affiche l'alerte dans un conteneur
-   * @param {HTMLElement} container - Conteneur où ajouter l'alerte
-   * @returns {Alert} L'instance courante pour chaînage
+   * Définit la taille du spinner
+   * @param {string} size - Taille du spinner (small, medium, large)
+   * @returns {Spinner} L'instance courante pour chaînage
    */
-  show(container) {
-    if (!this.element) {
-      this.render(container);
-    } else if (container && !this.element.parentNode) {
-      container.appendChild(this.element);
+  setSize(size) {
+    if (this.element) {
+      this.element.classList.remove(`spinner-${this.size}`);
+      this.element.classList.add(`spinner-${size}`);
     }
     
+    this.size = size;
     return this;
   }
   
   /**
-   * Ferme et supprime l'alerte
-   * @param {boolean} runCallback - Si true, exécute le callback onDismiss
-   * @returns {Alert} L'instance courante pour chaînage
+   * Définit la couleur du spinner
+   * @param {string} color - Couleur CSS valide
+   * @returns {Spinner} L'instance courante pour chaînage
    */
-  dismiss(runCallback = true) {
-    // Annuler le timeout de fermeture automatique
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
+  setColor(color) {
+    this.color = color;
     
-    // Ajouter la classe de sortie pour l'animation
     if (this.element) {
-      this.element.classList.add('alert-dismissing');
-      
-      // Attendre la fin de l'animation avant de supprimer l'élément
-      setTimeout(() => {
-        if (this.element && this.element.parentNode) {
-          this.element.parentNode.removeChild(this.element);
-          
-          // Exécuter le callback si demandé
-          if (runCallback) {
-            this.onDismiss();
-          }
-        }
-      }, 300); // Durée de l'animation
-    }
-    
-    return this;
-  }
-  
-  /**
-   * Modifie le type de l'alerte
-   * @param {string} type - Nouveau type (info, success, warning, error)
-   * @returns {Alert} L'instance courante pour chaînage
-   */
-  setType(type) {
-    if (this.element) {
-      // Supprimer l'ancien type
-      this.element.classList.remove(`alert-${this.type}`);
-      
-      // Ajouter le nouveau type
-      this.type = type;
-      this.element.classList.add(`alert-${this.type}`);
-      
-      // Mettre à jour l'icône si c'est l'icône par défaut
-      if (this._isDefaultIcon()) {
-        const iconElement = this.element.querySelector('.alert-icon span');
-        if (iconElement) {
-          iconElement.className = this._getDefaultIcon();
-        }
+      const spinnerElement = this.element.querySelector('.spinner');
+      if (spinnerElement) {
+        spinnerElement.style.borderTopColor = color;
       }
-    } else {
-      this.type = type;
     }
     
     return this;
   }
   
   /**
-   * Modifie le message de l'alerte
-   * @param {string} message - Nouveau message
-   * @returns {Alert} L'instance courante pour chaînage
+   * Définit le message du spinner
+   * @param {string} message - Message à afficher
+   * @returns {Spinner} L'instance courante pour chaînage
    */
   setMessage(message) {
     this.message = message;
     
     if (this.element) {
-      const messageElement = this.element.querySelector('.alert-message');
-      if (messageElement) {
-        // Supporter HTML ou texte simple
-        if (message.includes('<') && message.includes('>')) {
-          messageElement.innerHTML = message;
-        } else {
+      let messageElement = this.element.querySelector('.spinner-message');
+      
+      if (message) {
+        if (messageElement) {
+          // Mettre à jour le message existant
           messageElement.textContent = message;
+        } else {
+          // Créer un nouvel élément message
+          messageElement = document.createElement('div');
+          messageElement.className = 'spinner-message';
+          messageElement.textContent = message;
+          this.element.appendChild(messageElement);
         }
+      } else if (messageElement) {
+        // Supprimer le message si vide
+        messageElement.parentNode.removeChild(messageElement);
       }
     }
     
@@ -227,39 +129,49 @@ class Alert {
   }
   
   /**
-   * Modifie le titre de l'alerte
-   * @param {string} title - Nouveau titre
-   * @returns {Alert} L'instance courante pour chaînage
+   * Active ou désactive l'overlay
+   * @param {boolean} overlay - Si true, active l'overlay
+   * @returns {Spinner} L'instance courante pour chaînage
    */
-  setTitle(title) {
-    this.title = title;
+  setOverlay(overlay) {
+    this.overlay = overlay;
     
     if (this.element) {
-      let titleElement = this.element.querySelector('.alert-title');
-      const textElement = this.element.querySelector('.alert-text');
-      
-      if (title) {
-        if (titleElement) {
-          // Mettre à jour le titre existant
-          titleElement.textContent = title;
-        } else if (textElement) {
-          // Créer un nouvel élément titre
-          titleElement = document.createElement('div');
-          titleElement.className = 'alert-title';
-          titleElement.textContent = title;
-          
-          // Insérer avant le message
-          const messageElement = textElement.querySelector('.alert-message');
-          if (messageElement) {
-            textElement.insertBefore(titleElement, messageElement);
-          } else {
-            textElement.appendChild(titleElement);
-          }
-        }
-      } else if (titleElement) {
-        // Supprimer le titre si vide
-        titleElement.parentNode.removeChild(titleElement);
+      if (overlay) {
+        this.element.classList.add('spinner-overlay');
+      } else {
+        this.element.classList.remove('spinner-overlay');
       }
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Affiche le spinner comme overlay global sur toute la page
+   * @returns {Spinner} L'instance courante pour chaînage
+   */
+  showGlobal() {
+    if (!this.element) {
+      this.render();
+    }
+    
+    // Configurer comme overlay global
+    this.setOverlay(true);
+    
+    // Ajouter au corps du document
+    document.body.appendChild(this.element);
+    
+    return this;
+  }
+  
+  /**
+   * Masque et supprime le spinner
+   * @returns {Spinner} L'instance courante pour chaînage
+   */
+  hide() {
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.removeChild(this.element);
     }
     
     return this;
@@ -269,165 +181,34 @@ class Alert {
    * Nettoie les ressources utilisées par le composant
    */
   destroy() {
-    // Annuler le timeout de fermeture automatique
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
-    
-    // Nettoyer les écouteurs d'événements
-    if (this.dismissButton) {
-      this.dismissButton.removeEventListener('click', this._handleDismiss);
-    }
-    
     // Supprimer l'élément du DOM s'il est attaché
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
     
-    // Réinitialiser les références
     this.element = null;
-    this.dismissButton = null;
-  }
-  
-  /* Méthodes privées */
-  
-  /**
-   * Gère l'événement de fermeture de l'alerte
-   * @private
-   */
-  _handleDismiss() {
-    this.dismiss();
   }
   
   /**
-   * Détermine l'icône par défaut selon le type
-   * @returns {string} Classe CSS de l'icône
-   * @private
-   */
-  _getDefaultIcon() {
-    switch (this.type) {
-      case 'success':
-        return 'icon-check-circle';
-      case 'warning':
-        return 'icon-alert-triangle';
-      case 'error':
-        return 'icon-x-circle';
-      case 'info':
-      default:
-        return 'icon-info';
-    }
-  }
-  
-  /**
-   * Vérifie si l'icône actuelle est l'icône par défaut
-   * @returns {boolean} True si c'est l'icône par défaut
-   * @private
-   */
-  _isDefaultIcon() {
-    const defaultIcons = [
-      'icon-check-circle',
-      'icon-alert-triangle',
-      'icon-x-circle',
-      'icon-info'
-    ];
-    
-    return defaultIcons.includes(this.icon);
-  }
-  
-  /**
-   * Crée et affiche une alerte de type info
-   * @param {string} message - Message de l'alerte
+   * Crée et affiche un spinner global
+   * @param {string} message - Message à afficher
    * @param {Object} options - Options de configuration
-   * @returns {Alert} Une instance d'alerte
+   * @returns {Spinner} Une instance de spinner
    * @static
    */
-  static info(message, options = {}) {
-    const alert = new Alert({
-      type: 'info',
-      message: message,
+  static show(message = '', options = {}) {
+    const spinner = new Spinner({
+      message,
+      overlay: true,
       ...options
     });
     
-    return Alert._showGlobal(alert);
-  }
-  
-  /**
-   * Crée et affiche une alerte de type succès
-   * @param {string} message - Message de l'alerte
-   * @param {Object} options - Options de configuration
-   * @returns {Alert} Une instance d'alerte
-   * @static
-   */
-  static success(message, options = {}) {
-    const alert = new Alert({
-      type: 'success',
-      message: message,
-      ...options
-    });
-    
-    return Alert._showGlobal(alert);
-  }
-  
-  /**
-   * Crée et affiche une alerte de type avertissement
-   * @param {string} message - Message de l'alerte
-   * @param {Object} options - Options de configuration
-   * @returns {Alert} Une instance d'alerte
-   * @static
-   */
-  static warning(message, options = {}) {
-    const alert = new Alert({
-      type: 'warning',
-      message: message,
-      ...options
-    });
-    
-    return Alert._showGlobal(alert);
-  }
-  
-  /**
-   * Crée et affiche une alerte de type erreur
-   * @param {string} message - Message de l'alerte
-   * @param {Object} options - Options de configuration
-   * @returns {Alert} Une instance d'alerte
-   * @static
-   */
-  static error(message, options = {}) {
-    const alert = new Alert({
-      type: 'error',
-      message: message,
-      ...options
-    });
-    
-    return Alert._showGlobal(alert);
-  }
-  
-  /**
-   * Affiche une alerte dans le conteneur global
-   * @param {Alert} alert - Instance d'alerte à afficher
-   * @returns {Alert} L'instance d'alerte
-   * @private
-   * @static
-   */
-  static _showGlobal(alert) {
-    // Obtenir ou créer le conteneur d'alertes global
-    let alertsContainer = document.getElementById('global-alerts-container');
-    
-    if (!alertsContainer) {
-      alertsContainer = document.createElement('div');
-      alertsContainer.id = 'global-alerts-container';
-      alertsContainer.className = 'alerts-container';
-      document.body.appendChild(alertsContainer);
-    }
-    
-    // Afficher l'alerte dans le conteneur
-    alert.show(alertsContainer);
-    
-    return alert;
+    spinner.showGlobal();
+    return spinner;
   }
 }
 
 // Exposer le composant dans l'espace de nommage global
 window.components = window.components || {};
-window.components.Alert = Alert;
+window.components.common = window.components.common || {};
+window.components.common.Spinner = Spinner;
