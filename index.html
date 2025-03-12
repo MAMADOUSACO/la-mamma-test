@@ -12,10 +12,6 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/login.css">
-    <!-- Modules CSS spécifiques seront chargés dynamiquement selon la page -->
-    
-    <!-- Outil de diagnostic - À RETIRER APRÈS DÉBOGAGE -->
-    <script src="js/diagnostic.js"></script>
 </head>
 <body>
     <div id="app">
@@ -62,7 +58,6 @@
     <script src="js/components/common/Button.js"></script>
     <script src="js/components/common/Modal.js"></script>
     <script src="js/components/common/Tabs.js"></script>
-    <!-- Assurez-vous que Alert est chargé avant Dropdown qui pourrait en dépendre -->
     <script src="js/components/common/Alert.js"></script>
     <script src="js/components/common/Spinner.js"></script>
     <script src="js/components/common/Dropdown.js"></script>
@@ -78,46 +73,13 @@
     <script src="views/Login.js"></script>
     <script src="views/Dashboard.js"></script>
     
+    <!-- Correctif pour le namespace des vues -->
+    <script src="js/namespace-fix.js"></script>
+    
     <!-- Routeur -->
     <script src="js/router.js"></script>
     
     <!-- Point d'entrée de l'application -->
     <script src="js/app.js"></script>
-    
-    <!-- Script de débogage temporaire - À RETIRER APRÈS DÉBOGAGE -->
-    <script>
-        // Ce script s'exécute après que tout est chargé
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("📊 DEBUGGING: DOMContentLoaded triggered");
-            
-            // Forcer l'authentification (sécurité de dev uniquement)
-            if (window.services && window.services.auth) {
-                console.log("📊 Authentication state:", window.services.auth.isAuthenticated() ? "Authenticated" : "Not authenticated");
-            }
-            
-            // Vérifier si la vue Dashboard existe et peut être instanciée
-            setTimeout(function() {
-                console.log("📊 Attempting to manually render Dashboard");
-                try {
-                    if (window.views && window.views.Dashboard) {
-                        const dashboard = new window.views.Dashboard();
-                        const dashboardElement = dashboard.render();
-                        
-                        // Vider le conteneur de l'application et y ajouter le tableau de bord
-                        const appContainer = document.getElementById('app');
-                        if (appContainer) {
-                            console.log("📊 Clearing app container and adding Dashboard");
-                            appContainer.innerHTML = '';
-                            appContainer.appendChild(dashboardElement);
-                        }
-                    } else {
-                        console.error("📊 Dashboard view not found");
-                    }
-                } catch (e) {
-                    console.error("📊 Error rendering Dashboard manually:", e);
-                }
-            }, 2000);
-        });
-    </script>
 </body>
 </html>
