@@ -650,5 +650,4 @@ class Dashboard {
   
   // Exporter la vue
   window.views = window.views || {};
-  window.views.Dashboard = Dashboard; // Pour Dashboard.js
-  window.views.Login = Login; // Pour Login.js
+  window.views.Dashboard = Dashboard;
